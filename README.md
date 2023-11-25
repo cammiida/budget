@@ -1,12 +1,8 @@
-# Remix Race Stack
+$ Budget
 
-![The Remix Race Stack](https://user-images.githubusercontent.com/43375532/235511500-8bb82094-8599-4dc3-84d9-3c2d128c4678.png)
+Using the REMIX RACE STACK.
+Learn more about [Remix Stacks here](https://remix.run/stacks).
 
-Learn more about [Remix Stacks](https://remix.run/stacks).
-
-```
-npx create-remix@latest --template jose-donato/race-stack
-```
 
 ## What's in the stack
 
