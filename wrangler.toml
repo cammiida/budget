@@ -3,5 +3,5 @@ compatibility_flags = ["streams_enable_constructors"]
 
 [[ d1_databases ]]
 binding = "DB" # i.e. available in your Worker on env.DB
-database_name = "race-stack"
-database_id = "b1e8fb04-966c-47cf-bc32-d2db4b0580f7"
+database_name = "budget"
+database_id = "bea96e4d-6885-4dc7-8de4-d4a6a6fc20dc"

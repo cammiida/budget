@@ -13,7 +13,6 @@ export const users = sqliteTable(
       autoIncrement: true,
     }),
     email: text("email").notNull(),
-    password: text("password"),
     avatar: text("avatar"),
     name: text("name"),
   },
@@ -24,20 +23,3 @@ export const users = sqliteTable(
 
 export type User = InferModel<typeof users>;
 export type NewUser = InferModel<typeof users, "insert">;
-
-export const teams = sqliteTable("teams", {
-  id: integer("id").primaryKey({
-    autoIncrement: true,
-  }),
-  name: text("name").notNull(),
-  avatar: text("avatar"),
-});
-
-export const usersToTeams = sqliteTable("usersToTeams", {
-  userId: integer("userId")
-    .notNull()
-    .references(() => users.id),
-  teamId: integer("teamId")
-    .notNull()
-    .references(() => teams.id),
-});

@@ -1,36 +1,9 @@
 {
   "version": "5",
   "dialect": "sqlite",
-  "id": "57e2af1a-5bec-4d57-917f-1a26a391cdbd",
+  "id": "ac8ad92e-9771-4cb0-8ef3-bf0f63118f24",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
-    "teams": {
-      "name": "teams",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "integer",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": true
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "avatar": {
-          "name": "avatar",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {}
-    },
     "users": {
       "name": "users",
       "columns": {
@@ -46,12 +19,6 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
-        },
-        "password": {
-          "name": "password",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
         },
         "avatar": {
           "name": "avatar",
@@ -76,51 +43,6 @@
         }
       },
       "foreignKeys": {},
-      "compositePrimaryKeys": {}
-    },
-    "usersToTeams": {
-      "name": "usersToTeams",
-      "columns": {
-        "userId": {
-          "name": "userId",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "teamId": {
-          "name": "teamId",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "usersToTeams_userId_users_id_fk": {
-          "name": "usersToTeams_userId_users_id_fk",
-          "tableFrom": "usersToTeams",
-          "tableTo": "users",
-          "columnsFrom": [
-            "userId"
-          ],
-          "columnsTo": [
-            "id"
-          ]
-        },
-        "usersToTeams_teamId_teams_id_fk": {
-          "name": "usersToTeams_teamId_teams_id_fk",
-          "tableFrom": "usersToTeams",
-          "tableTo": "teams",
-          "columnsFrom": [
-            "teamId"
-          ],
-          "columnsTo": [
-            "id"
-          ]
-        }
-      },
       "compositePrimaryKeys": {}
     }
   },
