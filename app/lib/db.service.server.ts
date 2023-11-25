@@ -1,11 +1,10 @@
-import { and, eq, gt } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 import { drizzle } from "drizzle-orm/d1";
 
 const contextWithDb = (
   context: Record<string, unknown>
-): context is { DB: D1Database } => {
-  return "DB" in context;
+): context is { db: D1Database } => {
+  return "db" in context;
 };
 
 export const getDbFromContext = (
@@ -15,5 +14,5 @@ export const getDbFromContext = (
     throw new Error("No database in context");
   }
 
-  return drizzle(context.DB);
+  return drizzle(context.db);
 };

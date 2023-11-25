@@ -1,8 +1,8 @@
 import type { ActionArgs } from "@remix-run/cloudflare";
 import { json, redirect } from "@remix-run/cloudflare";
 
-import { getThemeSession } from "@/lib/theme.server";
-import { isTheme } from "@/lib/theme-provider";
+import { getThemeSession } from "~/lib/theme.server";
+import { isTheme } from "~/lib/theme-provider";
 
 export const action = async ({ request }: ActionArgs) => {
   const themeSession = await getThemeSession(request);

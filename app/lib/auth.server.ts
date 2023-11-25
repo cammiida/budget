@@ -1,46 +1,43 @@
+import { DataFunctionArgs } from "@remix-run/cloudflare";
 import { Authenticator } from "remix-auth";
-import { FormStrategy } from "remix-auth-form";
-import { getDbFromContext } from "./db.service.server";
-import { users } from "./schema";
-import { eq } from "drizzle-orm";
-import { verify } from "./passwordHashing.server";
-import invariant from "tiny-invariant";
-import { authSessionStorage } from "./cookie.server";
+import { Profile, createSessionStorage } from "./cookie.server";
+import {
+  GoogleStrategyDefaultName,
+  createGoogleStrategy,
+} from "./google-strategy.server";
 
-export let authenticator = new Authenticator<{
-  email: string;
-  id: number;
-}>(authSessionStorage);
+function createAuthenticator(args: DataFunctionArgs) {
+  const authenticator = new Authenticator<Profile>(
+    createSessionStorage(args.context)
+  );
+  authenticator.use(createGoogleStrategy(args));
 
-authenticator.use(
-  new FormStrategy(async ({ form, context }: any) => {
-    const email = form.get("email");
-    const password = form.get("password");
-    const db = getDbFromContext(context.context);
-    const possibleUser = await db
-      .select({
-        email: users.email,
-        password: users.password,
-        id: users.id,
-      })
-      .from(users)
-      .where(eq(users.email, email))
-      .get();
-    if (!possibleUser) {
-      throw new Error("Invalid email or password");
+  return authenticator;
+}
+
+export function authenticate(args: DataFunctionArgs) {
+  return createAuthenticator(args).authenticate(
+    GoogleStrategyDefaultName,
+    args.request,
+    {
+      successRedirect: "/",
+      failureRedirect: "/login",
     }
-    invariant(possibleUser.password, "Password is required");
-    const passwordValid = await verify({
-      hash: possibleUser.password,
-      password: password,
-    });
-    if (!passwordValid) {
-      throw new Error("Invalid email or password");
-    }
-    return {
-      email: possibleUser.email,
-      id: possibleUser.id,
-    };
-  }),
-  "form"
-);
+  );
+}
+
+export function logout(args: DataFunctionArgs) {
+  return createAuthenticator(args).logout(args.request, {
+    redirectTo: "/login",
+  });
+}
+
+export function getMe(args: DataFunctionArgs) {
+  return createAuthenticator(args).isAuthenticated(args.request, {
+    failureRedirect: "/login",
+  });
+}
+
+export function getOptionalMe(args: DataFunctionArgs) {
+  return createAuthenticator(args).isAuthenticated(args.request);
+}

@@ -1,23 +1,30 @@
 import {
-  createCookie,
+  AppLoadContext,
   createCookieSessionStorage,
 } from "@remix-run/cloudflare";
+import { GoogleProfile } from "./google-strategy.server";
 
-export const gdprConsent = createCookie("gdpr-consent", {
-  maxAge: 31536000, // One Year
-});
+export type Profile = Pick<GoogleProfile, "id" | "displayName" | "name"> & {
+  email: string;
+  avatar?: string;
+};
 
-export const authSessionStorage = createCookieSessionStorage({
-  cookie: {
-    name: "_auth_session", // use any name you want here
-    sameSite: "lax", // this helps with CSRF
-    path: "/", // remember to add this so the cookie will work in all routes
-    httpOnly: true, // for security reasons, make this cookie http only
-    secrets: ["replace_me"], // replace this with an actual secret
-    secure: true,
-    maxAge: 60 * 60 * 24 * 30,
-  },
-});
+type SessionFlashData = {
+  error: string;
+};
+
+export const createSessionStorage = (context: AppLoadContext) =>
+  createCookieSessionStorage<Profile, SessionFlashData>({
+    cookie: {
+      name: "__session",
+      httpOnly: true,
+      maxAge: 60 * 60 * 24, // 24 hours
+      path: "/",
+      sameSite: "lax",
+      secrets: [context.env.SESSION_SECRET],
+      secure: context.env.NODE_ENV === "production" ? true : false,
+    },
+  });
 
 export const flashSession = createCookieSessionStorage({
   cookie: {
