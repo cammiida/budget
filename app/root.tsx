@@ -1,6 +1,7 @@
 import {
   LinksFunction,
   LoaderArgs,
+  SerializeFrom,
   V2_MetaFunction,
   json,
 } from "@remix-run/cloudflare";
@@ -13,10 +14,13 @@ import {
   ScrollRestoration,
   useLoaderData,
   useRouteError,
+  useRouteLoaderData,
 } from "@remix-run/react";
 import clsx from "clsx";
 import { useEffect } from "react";
+import { Navbar } from "./components/ui/navbar";
 import { useToast } from "./components/ui/use-toast";
+import { getMe } from "./lib/auth.server";
 import { flashSession } from "./lib/cookie.server";
 import { ThemeHead, ThemeProvider } from "./lib/theme-provider";
 import { getThemeSession } from "./lib/theme.server";
@@ -36,11 +40,12 @@ export const meta: V2_MetaFunction = () => {
   ];
 };
 
-export async function loader({ request, context }: LoaderArgs) {
-  const cookieHeader = request.headers.get("Cookie");
-  const themeSession = await getThemeSession(request);
+export async function loader(args: LoaderArgs) {
+  const cookieHeader = args.request.headers.get("Cookie");
+  const themeSession = await getThemeSession(args.request);
   const fSession = await flashSession.getSession(cookieHeader);
   const toast = fSession.get("toast") || null;
+  const user = await getMe(args);
 
   const headers = new Headers();
 
@@ -51,9 +56,10 @@ export async function loader({ request, context }: LoaderArgs) {
       theme: themeSession.getTheme(),
       toast,
       ENV: {
-        POSTHOG_API_KEY: context.POSTHOG_API_KEY, // TODO:
-        POSTHOG_API_HOST: context.POSTHOG_API_HOST,
+        POSTHOG_API_KEY: args.context.POSTHOG_API_KEY, // TODO:
+        POSTHOG_API_HOST: args.context.POSTHOG_API_HOST,
       },
+      user,
     },
     {
       headers,
@@ -64,11 +70,13 @@ export async function loader({ request, context }: LoaderArgs) {
 export default function App() {
   const data = useLoaderData<typeof loader>();
   const { toast } = useToast();
+
   useEffect(() => {
     if (data.toast) {
       toast(data.toast);
     }
   }, [data.toast]);
+
   return (
     <html lang="en">
       <ThemeProvider specifiedTheme={data.theme}>
@@ -80,6 +88,7 @@ export default function App() {
           <ThemeHead ssrTheme={Boolean(data.theme)} />
         </head>
         <body className={clsx(data.theme === "dark" ? "dark" : "light")}>
+          <Navbar />
           <Outlet />
           <ScrollRestoration />
           <Scripts />
@@ -108,4 +117,10 @@ export function ErrorBoundary() {
       </body>
     </html>
   );
+}
+
+export type RootLoaderData = SerializeFrom<typeof loader>;
+
+export function useRootData(): RootLoaderData | null {
+  return (useRouteLoaderData("root") as RootLoaderData) ?? null;
 }

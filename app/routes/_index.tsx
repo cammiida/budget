@@ -1,7 +1,6 @@
 import { LoaderArgs, json, redirect } from "@remix-run/cloudflare";
 import { Outlet, useLoaderData } from "@remix-run/react";
 import { getMe, logout } from "~/lib/auth.server";
-import { getDbFromContext } from "~/lib/db.service.server";
 import { Theme, useTheme } from "~/lib/theme-provider";
 
 const LINKS = [
@@ -12,7 +11,6 @@ const LINKS = [
 ];
 
 export async function loader(args: LoaderArgs) {
-  const db = getDbFromContext(args.context);
   const user = await getMe(args);
 
   if (!user) {
@@ -38,9 +36,9 @@ export default function Index() {
   return (
     <>
       <div className="overflow-x-hidden h-screen">
-        <p className="text-white">Hello {user.name}</p>
+        <p className="">Hello {user.displayName}</p>
         <button onClick={toggleTheme}>Toggle theme</button>
-        <h1 className="text-white">HOME</h1>
+        <h1 className="">HOME</h1>
         <Outlet />
       </div>
     </>

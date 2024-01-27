@@ -3,8 +3,8 @@ import type {
   EventContext,
   KVNamespace,
 } from "@cloudflare/workers-types";
-import { envSchema } from "~env.server";
 import type { z } from "zod";
+import { envSchema } from "~env.server";
 
 declare module "@remix-run/server-runtime" {
   interface AppLoadContext {

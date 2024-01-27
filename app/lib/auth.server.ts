@@ -1,10 +1,7 @@
 import { DataFunctionArgs } from "@remix-run/cloudflare";
 import { Authenticator } from "remix-auth";
-import { users } from "~/lib/schema";
 import { Profile, createSessionStorage } from "./cookie.server";
 
-import { eq } from "drizzle-orm";
-import { getDbFromContext } from "./db.service.server";
 import {
   GoogleStrategyDefaultName,
   createGoogleStrategy,
@@ -37,24 +34,7 @@ export function logout(args: DataFunctionArgs) {
 }
 
 export async function getMe(args: DataFunctionArgs) {
-  const userSession = await createAuthenticator(args).isAuthenticated(
-    args.request
-  );
-  const db = getDbFromContext(args.context);
-  if (!userSession) {
-    return null;
-  }
-
-  return db
-    .select({
-      id: users.id,
-      email: users.email,
-      avatar: users.avatar,
-      name: users.name,
-    })
-    .from(users)
-    .where(eq(users.email, userSession.email))
-    .get();
+  return createAuthenticator(args).isAuthenticated(args.request);
 }
 
 export function getOptionalMe(args: DataFunctionArgs) {
