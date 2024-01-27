@@ -1,7 +1,7 @@
-import { ActionArgs, redirect } from "@remix-run/cloudflare";
-import { Form, useActionData, useNavigation } from "@remix-run/react";
+import { ActionArgs, LoaderArgs, redirect } from "@remix-run/cloudflare";
+import { Form } from "@remix-run/react";
 import { Button } from "~/components/ui/button";
-import { authenticate } from "~/lib/auth.server";
+import { authenticate, getMe } from "~/lib/auth.server";
 import { flashSession } from "~/lib/cookie.server";
 
 export async function action(args: ActionArgs) {
@@ -15,12 +15,23 @@ export async function action(args: ActionArgs) {
       title: "Uh oh! Login failed.",
       description: "Please check your email and password and try again.",
     });
+
     return redirect("/login", {
       headers: {
         "Set-Cookie": await flashSession.commitSession(fSession),
       },
     });
   }
+}
+
+export async function loader(args: LoaderArgs) {
+  const user = await getMe(args);
+
+  if (user) {
+    throw redirect("/");
+  }
+
+  return new Response(null);
 }
 
 export default function Index() {
