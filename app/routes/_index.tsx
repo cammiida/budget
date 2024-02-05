@@ -38,7 +38,6 @@ export default function Index() {
       <div className="overflow-x-hidden h-screen">
         <p className="">Hello {user.displayName}</p>
         <button onClick={toggleTheme}>Toggle theme</button>
-        <h1 className="">HOME</h1>
         <Outlet />
       </div>
     </>

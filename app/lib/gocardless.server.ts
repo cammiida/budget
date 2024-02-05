@@ -1,8 +1,4 @@
-import {
-  AppLoadContext,
-  createCookieSessionStorage,
-  json,
-} from "@remix-run/cloudflare";
+import { LoaderArgs, createCookieSessionStorage } from "@remix-run/cloudflare";
 import { z } from "zod";
 
 export const goCardlessSchema = z.object({
@@ -26,55 +22,67 @@ const goCardlessStorage = createCookieSessionStorage<GoCardlessSession>({
   },
 });
 
-async function getGoCardlessSession(request: Request) {
+async function getGoCardlessSessionManager({
+  request,
+  context,
+}: Pick<LoaderArgs, "request" | "context">) {
   const session = await goCardlessStorage.getSession(
     request.headers.get("Cookie")
   );
 
-  return {
-    getSessionValue: () => session.get("goCardless"),
-    setSession: (sessionValue: GoCardless) =>
-      session.set("goCardless", sessionValue),
-    commit: () => goCardlessStorage.commitSession(session),
-  };
-}
+  function getSessionValue() {
+    return session.get("goCardless");
+  }
 
-export async function goCardlessLogin(
-  request: Request,
-  context: AppLoadContext
-) {
-  const session = await getGoCardlessSession(request);
-  const sessionValue = session.getSessionValue();
+  function setSession(sessionValue: GoCardless) {
+    session.set("goCardless", sessionValue);
+  }
 
-  // TODO: refresh the access token if it has expired
-  if (!!sessionValue) {
+  function commit() {
+    return goCardlessStorage.commitSession(session);
+  }
+
+  async function getSession() {
+    if (getSessionValue()) {
+      return session;
+    }
+    return getAccessToken();
+  }
+
+  async function getAccessToken() {
+    // if no session value, get a new access token
+    const accessTokenResponse = await fetch(
+      `https://bankaccountdata.gocardless.com/api/v2/token/new/`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          secret_id: context.env.GO_CARDLESS_SECRET_ID,
+          secret_key: context.env.GO_CARDLESS_SECRET_KEY,
+        }),
+      }
+    );
+
+    const body = await accessTokenResponse.json<GoCardless>();
+    setSession(body);
+
     return session;
   }
 
-  // if no session value, get a new access token
-  const accessTokenResponse = await fetch(
-    `https://bankaccountdata.gocardless.com/api/v2/token/new/`,
-    {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        secret_id: context.env.GO_CARDLESS_SECRET_ID,
-        secret_key: context.env.GO_CARDLESS_SECRET_KEY,
-      }),
-    }
-  );
-
-  const body = await accessTokenResponse.json<GoCardless>();
-  session.setSession(body);
-
-  return session;
+  return {
+    getSession,
+    getSessionValue,
+    setSession,
+    commit,
+    getAccessToken,
+  };
 }
+
+export { getGoCardlessSessionManager };
 
 export function refreshAccessToken(session: GoCardless) {
   // refresh the access token
   // TODO:
 }
-
-export { getGoCardlessSession };
