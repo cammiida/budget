@@ -8,6 +8,20 @@
       "when": 1700944822756,
       "tag": "0000_silent_smasher",
       "breakpoints": false
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1707134294751,
+      "tag": "0001_magenta_the_renegades",
+      "breakpoints": false
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1707137659033,
+      "tag": "0002_medical_speed_demon",
+      "breakpoints": false
     }
   ]
 }

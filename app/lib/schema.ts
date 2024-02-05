@@ -1,5 +1,6 @@
 import type { InferModel } from "drizzle-orm";
 import {
+  foreignKey,
   integer,
   sqliteTable,
   text,
@@ -23,3 +24,25 @@ export const users = sqliteTable(
 
 export type User = InferModel<typeof users>;
 export type NewUser = InferModel<typeof users, "insert">;
+
+export const usersBanksRelations = sqliteTable(
+  "users_banks_relations",
+  {
+    userId: integer("user_id")
+      .references(() => users.id)
+      .notNull(),
+    bankId: text("bank_id").notNull(),
+  },
+  (relations) => ({
+    userBankIdx: uniqueIndex("userBankIdx").on(
+      relations.userId,
+      relations.bankId
+    ),
+  })
+);
+
+export type UserBankRelation = InferModel<typeof usersBanksRelations>;
+export type NewUserBankRelation = InferModel<
+  typeof usersBanksRelations,
+  "insert"
+>;
