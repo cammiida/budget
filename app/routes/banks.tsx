@@ -1,5 +1,5 @@
 import { ActionArgs, LoaderArgs, json } from "@remix-run/cloudflare";
-import { useLoaderData } from "@remix-run/react";
+import { Form, useFetcher, useLoaderData } from "@remix-run/react";
 import { z } from "zod";
 import { Api } from "~/lib/api.server";
 import { requireLogin } from "~/lib/auth.server";
@@ -13,6 +13,7 @@ const bankSchema = z.object({
   countries: z.array(z.unknown()),
   logo: z.string(),
 });
+export type Bank = z.infer<typeof bankSchema>;
 
 export async function loader(args: LoaderArgs) {
   const session = await requireLogin(args);
@@ -48,8 +49,6 @@ export async function loader(args: LoaderArgs) {
 }
 
 export async function action(args: ActionArgs) {
-  console.log("action");
-
   const userEmail = (await requireLogin(args)).email;
 
   const api = Api.create(args.context);
@@ -57,15 +56,13 @@ export async function action(args: ActionArgs) {
   const formData = await args.request.formData();
   const chosenBank = formData.get("bank");
   const userId = (await api.getUserByEmail(userEmail)).id;
-  console.log({ chosenBank, userId });
 
   const result = await api.addUserBankRelation({
     userId,
     bankId: chosenBank as string,
   });
-  console.log({ result: result });
 
-  return json({ message: "This is a POST request" });
+  return json({ result });
 }
 
 function Banks() {
@@ -76,15 +73,12 @@ function Banks() {
       <div className="flex flex-col gap-4">
         <h1 className="text-lg">Your banks</h1>
         {chosenBanks.map((it) => (
-          <div key={it.id} className="flex gap-2">
-            <img className="w-8 h-8 rounded-full" src={it.logo} alt={it.name} />
-            <span>{it.name}</span>
-          </div>
+          <Bank bank={it} key={it.id} />
         ))}
       </div>
       <div>
         <h2 className="text-lg">Add a new bank</h2>
-        <form method="post">
+        <Form method="post">
           <select name="bank">
             {banks.map((bank) => (
               <option key={bank.id} value={bank.id}>
@@ -93,10 +87,32 @@ function Banks() {
             ))}
           </select>
           <button type="submit">Submit</button>
-        </form>
+        </Form>
       </div>
     </div>
   );
 }
 
 export default Banks;
+
+function Bank({ bank }: { bank: Bank }) {
+  const fetcher = useFetcher();
+  const isDeleting = fetcher.state !== "idle";
+
+  return (
+    <div key={bank.id} className="flex gap-2">
+      <img className="w-8 h-8 rounded-full" src={bank.logo} alt={bank.name} />
+      <span>{bank.name}</span>
+      <fetcher.Form method="delete" action="/api/remove-bank">
+        <input type="hidden" name="bank" value={bank.id} />
+        <button
+          className="disabled:opacity-50 bg-red-500 text-white px-2 py-1 rounded-md"
+          type="submit"
+          disabled={isDeleting}
+        >
+          {isDeleting ? "Deleting..." : "Delete"}
+        </button>
+      </fetcher.Form>
+    </div>
+  );
+}

@@ -7,7 +7,7 @@ import {
   users,
   usersBanksRelations,
 } from "./schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 export class Api {
   db: DrizzleD1Database;
@@ -59,5 +59,18 @@ export class Api {
       .where(eq(usersBanksRelations.userId, userId))
       .all();
     return relations.map((relation) => relation.bankId);
+  }
+
+  async removeBankForUser(userId: number, bankId: string) {
+    return this.db
+      .delete(usersBanksRelations)
+      .where(
+        and(
+          eq(usersBanksRelations.userId, userId),
+          eq(usersBanksRelations.bankId, bankId)
+        )
+      )
+      .returning()
+      .get();
   }
 }
