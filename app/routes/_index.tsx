@@ -1,6 +1,6 @@
 import { LoaderArgs, json, redirect } from "@remix-run/cloudflare";
 import { Outlet, useLoaderData } from "@remix-run/react";
-import { getMe, logout } from "~/lib/auth.server";
+import { getUserSession, logout } from "~/lib/auth.server";
 import { Theme, useTheme } from "~/lib/theme-provider";
 
 const LINKS = [
@@ -11,7 +11,7 @@ const LINKS = [
 ];
 
 export async function loader(args: LoaderArgs) {
-  const user = await getMe(args);
+  const user = await getUserSession(args);
 
   if (!user) {
     await logout(args);

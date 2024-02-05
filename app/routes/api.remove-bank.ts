@@ -1,10 +1,10 @@
 import { ActionArgs, json } from "@remix-run/cloudflare";
-import { Api } from "~/lib/api.server";
+import { DbApi } from "~/lib/dbApi";
 import { requireLogin } from "~/lib/auth.server";
 
 export async function action(args: ActionArgs) {
   const session = await requireLogin(args);
-  const api = Api.create(args.context);
+  const api = DbApi.create(args.context);
   const user = await api.getUserByEmail(session.email);
   const bankId = (await args.request.formData()).get("bank") as string;
 

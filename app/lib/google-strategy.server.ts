@@ -10,7 +10,9 @@ import { Profile } from "./cookie.server";
 import { getDbFromContext } from "./db.service.server";
 import { users } from "./schema";
 
-export function createGoogleStrategy(args: DataFunctionArgs) {
+export function createGoogleStrategy(
+  args: Pick<DataFunctionArgs, "context" | "request">
+) {
   const url = new URL(args.request.url);
 
   // So that redirects work for all three variants

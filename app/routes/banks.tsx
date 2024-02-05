@@ -1,11 +1,11 @@
 import { ActionArgs, LoaderArgs, json } from "@remix-run/cloudflare";
 import { Form, useFetcher, useLoaderData } from "@remix-run/react";
 import { z } from "zod";
-import { Api } from "~/lib/api.server";
+import { DbApi } from "~/lib/dbApi";
 import { requireLogin } from "~/lib/auth.server";
-import { getGoCardlessSessionManager } from "~/lib/gocardless.server";
+import { GoCardlessApi } from "~/lib/gocardless-api.server";
 
-const bankSchema = z.object({
+export const bankSchema = z.object({
   id: z.string(),
   name: z.string(),
   bic: z.string(),
@@ -18,40 +18,23 @@ export type Bank = z.infer<typeof bankSchema>;
 export async function loader(args: LoaderArgs) {
   const session = await requireLogin(args);
 
-  const api = Api.create(args.context);
+  const api = DbApi.create(args.context);
   const user = await api.getUserByEmail(session.email);
 
-  const { request, context } = args;
-  const sessionManager = await getGoCardlessSessionManager({
-    request,
-    context,
-  });
-
-  const banksResponse = await fetch(
-    "https://bankaccountdata.gocardless.com/api/v2/institutions/?country=no",
-    {
-      headers: {
-        Authorization: `Bearer ${sessionManager.getSessionValue()?.access}`,
-        "content-type": "application/json",
-      },
-    }
-  );
-
-  const parsedBanks = bankSchema.array().safeParse(await banksResponse.json());
-  const banks = parsedBanks.success ? parsedBanks.data : [];
-  const chosenBankIds = await api.getAllBanksForUser(user.id);
-  const chosenBanks = banks.filter((bank) => chosenBankIds.includes(bank.id));
+  const goCardlessApi = await GoCardlessApi.create(args);
+  const allBanks = await goCardlessApi.getAllBanks();
+  const chosenBanks = await goCardlessApi.getChosenBanks();
 
   return json(
-    { user, banks: parsedBanks.success ? parsedBanks.data : [], chosenBanks },
-    { headers: { "Set-Cookie": await sessionManager.commit() } }
+    { user, allBanks, chosenBanks },
+    { headers: { "Set-Cookie": await goCardlessApi.commitSession() } }
   );
 }
 
 export async function action(args: ActionArgs) {
   const userEmail = (await requireLogin(args)).email;
 
-  const api = Api.create(args.context);
+  const api = DbApi.create(args.context);
 
   const formData = await args.request.formData();
   const chosenBank = formData.get("bank");
@@ -66,7 +49,7 @@ export async function action(args: ActionArgs) {
 }
 
 function Banks() {
-  const { banks, chosenBanks } = useLoaderData<typeof loader>();
+  const { allBanks: banks, chosenBanks } = useLoaderData<typeof loader>();
 
   return (
     <div>
@@ -111,6 +94,15 @@ function Bank({ bank }: { bank: Bank }) {
           disabled={isDeleting}
         >
           {isDeleting ? "Deleting..." : "Delete"}
+        </button>
+      </fetcher.Form>
+      <fetcher.Form method="post" action="/api/authenticate-bank">
+        <input type="hidden" name="bank" value={bank.id} />
+        <button
+          className="disabled:opacity-50 bg-blue-500 text-white px-2 py-1 rounded-md"
+          type="submit"
+        >
+          Authorize
         </button>
       </fetcher.Form>
     </div>

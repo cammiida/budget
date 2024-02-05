@@ -9,7 +9,7 @@ import {
 } from "./schema";
 import { and, eq } from "drizzle-orm";
 
-export class Api {
+export class DbApi {
   db: DrizzleD1Database;
 
   private constructor(context: AppLoadContext) {
@@ -17,7 +17,7 @@ export class Api {
   }
 
   static create(context: AppLoadContext) {
-    return new Api(context);
+    return new DbApi(context);
   }
 
   async getAllUsers(): Promise<User[]> {
@@ -38,7 +38,6 @@ export class Api {
 
   async addUserBankRelation(newRelation: NewUserBankRelation) {
     const user = await this.getUserById(newRelation.userId);
-    console.log({ foundUser: user });
 
     if (!user) {
       throw new Error(`User with id ${newRelation.userId} not found`);

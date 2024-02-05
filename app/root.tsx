@@ -20,7 +20,7 @@ import clsx from "clsx";
 import { useEffect } from "react";
 import { Navbar } from "./components/ui/navbar";
 import { useToast } from "./components/ui/use-toast";
-import { getMe } from "./lib/auth.server";
+import { getUserSession } from "./lib/auth.server";
 import { flashSession } from "./lib/cookie.server";
 import { ThemeHead, ThemeProvider } from "./lib/theme-provider";
 import { getThemeSession } from "./lib/theme.server";
@@ -45,7 +45,7 @@ export async function loader(args: LoaderArgs) {
   const themeSession = await getThemeSession(args.request);
   const fSession = await flashSession.getSession(cookieHeader);
   const toast = fSession.get("toast") || null;
-  const user = await getMe(args);
+  const user = await getUserSession(args);
 
   const headers = new Headers();
 

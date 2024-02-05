@@ -7,7 +7,9 @@ import {
   createGoogleStrategy,
 } from "./google-strategy.server";
 
-function createAuthenticator(args: DataFunctionArgs) {
+function createAuthenticator(
+  args: Pick<DataFunctionArgs, "context" | "request">
+) {
   const authenticator = new Authenticator<Profile>(
     createSessionStorage(args.context)
   );
@@ -39,10 +41,8 @@ export async function requireLogin(args: DataFunctionArgs) {
   });
 }
 
-export async function getMe(args: DataFunctionArgs) {
-  return createAuthenticator(args).isAuthenticated(args.request);
-}
-
-export function getOptionalMe(args: DataFunctionArgs) {
+export async function getUserSession(
+  args: Pick<DataFunctionArgs, "context" | "request">
+) {
   return createAuthenticator(args).isAuthenticated(args.request);
 }

@@ -1,7 +1,7 @@
 import { ActionArgs, LoaderArgs, redirect } from "@remix-run/cloudflare";
 import { Form } from "@remix-run/react";
 import { Button } from "~/components/ui/button";
-import { authenticate, getMe } from "~/lib/auth.server";
+import { authenticate, getUserSession } from "~/lib/auth.server";
 import { flashSession } from "~/lib/cookie.server";
 
 export async function action(args: ActionArgs) {
@@ -25,7 +25,7 @@ export async function action(args: ActionArgs) {
 }
 
 export async function loader(args: LoaderArgs) {
-  const user = await getMe(args);
+  const user = await getUserSession(args);
 
   if (user) {
     throw redirect("/");
