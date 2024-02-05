@@ -11,4 +11,11 @@ export const envSchema = z.object({
    */
   GOOGLE_CLIENT_ID: z.string(),
   GOOGLE_CLIENT_SECRET: z.string(),
+
+  /*
+   * GoCardless API
+   */
+  GO_CARDLESS_API_KEY: z.string(),
+  GO_CARDLESS_SECRET_ID: z.string(),
+  GO_CARDLESS_SECRET_KEY: z.string(),
 });

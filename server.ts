@@ -27,8 +27,6 @@ export const onRequest: ReturnType<
     build,
     mode: process.env.NODE_ENV,
     getLoadContext: (context) => {
-      console.log("getLoadContext", context);
-
       return {
         ...context,
         env: env.data,

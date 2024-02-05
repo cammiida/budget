@@ -33,6 +33,12 @@ export function logout(args: DataFunctionArgs) {
   });
 }
 
+export async function requireLogin(args: DataFunctionArgs) {
+  return createAuthenticator(args).isAuthenticated(args.request, {
+    failureRedirect: "/login",
+  });
+}
+
 export async function getMe(args: DataFunctionArgs) {
   return createAuthenticator(args).isAuthenticated(args.request);
 }
