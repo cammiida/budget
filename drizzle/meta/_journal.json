@@ -22,6 +22,20 @@
       "when": 1707137659033,
       "tag": "0002_medical_speed_demon",
       "breakpoints": false
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1707147415266,
+      "tag": "0003_dizzy_whistler",
+      "breakpoints": false
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1707147446366,
+      "tag": "0004_curly_redwing",
+      "breakpoints": false
     }
   ]
 }

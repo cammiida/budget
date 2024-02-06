@@ -4,7 +4,7 @@ import { requireLogin } from "~/lib/auth.server";
 
 export async function action(args: ActionArgs) {
   const session = await requireLogin(args);
-  const api = DbApi.create(args.context);
+  const api = DbApi.create(args);
   const user = await api.getUserByEmail(session.email);
   const bankId = (await args.request.formData()).get("bank") as string;
 

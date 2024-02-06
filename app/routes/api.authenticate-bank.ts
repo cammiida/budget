@@ -13,7 +13,7 @@ export async function action(args: ActionArgs) {
   const goCardlessApi = await GoCardlessApi.create(args);
   const goCardlessSession = await goCardlessApi.getSession();
 
-  const api = DbApi.create(args.context);
+  const api = DbApi.create(args);
   const user = await api.getUserByEmail(session.email);
   const institutionId = (await args.request.formData()).get("bank") as string;
 

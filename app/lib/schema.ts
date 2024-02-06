@@ -28,6 +28,7 @@ export type NewUser = InferModel<typeof users, "insert">;
 export const usersBanksRelations = sqliteTable(
   "users_banks_relations",
   {
+    requisitionId: text("requisition_id").primaryKey().notNull(),
     userId: integer("user_id")
       .references(() => users.id)
       .notNull(),

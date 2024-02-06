@@ -1,8 +1,8 @@
-import { ActionArgs, LoaderArgs, json } from "@remix-run/cloudflare";
+import { ActionArgs, LoaderArgs, json, redirect } from "@remix-run/cloudflare";
 import { Form, useFetcher, useLoaderData } from "@remix-run/react";
 import { z } from "zod";
-import { DbApi } from "~/lib/dbApi";
 import { requireLogin } from "~/lib/auth.server";
+import { DbApi } from "~/lib/dbApi";
 import { GoCardlessApi } from "~/lib/gocardless-api.server";
 
 export const bankSchema = z.object({
@@ -18,7 +18,7 @@ export type Bank = z.infer<typeof bankSchema>;
 export async function loader(args: LoaderArgs) {
   const session = await requireLogin(args);
 
-  const api = DbApi.create(args.context);
+  const api = DbApi.create(args);
   const user = await api.getUserByEmail(session.email);
 
   const goCardlessApi = await GoCardlessApi.create(args);
@@ -34,18 +34,20 @@ export async function loader(args: LoaderArgs) {
 export async function action(args: ActionArgs) {
   const userEmail = (await requireLogin(args)).email;
 
-  const api = DbApi.create(args.context);
+  const api = DbApi.create(args);
 
   const formData = await args.request.formData();
-  const chosenBank = formData.get("bank");
+  const chosenBank = formData.get("bank") as string;
   const userId = (await api.getUserByEmail(userEmail)).id;
+  const requisition = await api.getRequisition(chosenBank);
 
-  const result = await api.addUserBankRelation({
+  await api.addUserBankRelation({
     userId,
     bankId: chosenBank as string,
+    requisitionId: requisition.id,
   });
 
-  return json({ result });
+  return redirect(requisition.link);
 }
 
 function Banks() {
@@ -94,15 +96,6 @@ function Bank({ bank }: { bank: Bank }) {
           disabled={isDeleting}
         >
           {isDeleting ? "Deleting..." : "Delete"}
-        </button>
-      </fetcher.Form>
-      <fetcher.Form method="post" action="/api/authenticate-bank">
-        <input type="hidden" name="bank" value={bank.id} />
-        <button
-          className="disabled:opacity-50 bg-blue-500 text-white px-2 py-1 rounded-md"
-          type="submit"
-        >
-          Authorize
         </button>
       </fetcher.Form>
     </div>

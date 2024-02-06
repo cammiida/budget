@@ -5,8 +5,8 @@ import {
 } from "@remix-run/cloudflare";
 import { z } from "zod";
 import { bankSchema } from "~/routes/banks";
-import { DbApi } from "./dbApi";
 import { getUserSession } from "./auth.server";
+import { DbApi } from "./dbApi";
 
 export const goCardlessSessionSchema = z.object({
   access: z.string(),
@@ -128,7 +128,10 @@ export class GoCardlessApi {
     }
 
     const allBanks = await this.getAllBanks();
-    const userApi = DbApi.create(this.context);
+    const userApi = DbApi.create({
+      request: this.request,
+      context: this.context,
+    });
     const user = await userApi.getUserByEmail(session.email);
     const chosenBankIds = await userApi.getAllBanksForUser(user.id);
 
