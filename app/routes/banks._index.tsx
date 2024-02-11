@@ -35,11 +35,12 @@ export async function action(args: ActionArgs) {
   const userEmail = (await requireLogin(args)).email;
 
   const api = DbApi.create(args);
+  const goCardlessApi = await GoCardlessApi.create(args);
 
   const formData = await args.request.formData();
   const chosenBank = formData.get("bank") as string;
   const userId = (await api.getUserByEmail(userEmail)).id;
-  const requisition = await api.getRequisition(chosenBank);
+  const requisition = await goCardlessApi.createRequisition(chosenBank);
 
   await api.addUserBankRelation({
     userId,

@@ -10,6 +10,7 @@ import {
 import { and, eq } from "drizzle-orm";
 import { GoCardlessApi } from "./gocardless-api.server";
 import { z } from "zod";
+import { getUserSession } from "./auth.server";
 
 export class DbApi {
   db: DrizzleD1Database;
@@ -82,33 +83,16 @@ export class DbApi {
       .get();
   }
 
-  async getRequisition(institutionId: string) {
-    const goCardlessApi = await GoCardlessApi.create({
-      context: this.context,
-      request: this.request,
-    });
-    const goCardlessSession = await goCardlessApi.authorize();
-
-    const response = await fetch(
-      "https://bankaccountdata.gocardless.com/api/v2/requisitions/",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${goCardlessSession.data.goCardless?.access}`,
-        },
-        body: JSON.stringify({
-          redirect: "http://172.24.134.19:8788/api/authenticate-bank",
-          institution_id: institutionId,
-        }),
-      }
-    )
-      .then((res) => res.json())
-      .then((res) => requisitionSchema.parse(res));
-
-    return response;
+  async getBankRelation(userId: number, bankId: string) {
+    return this.db
+      .select()
+      .from(usersBanksRelations)
+      .where(
+        and(
+          eq(usersBanksRelations.userId, userId),
+          eq(usersBanksRelations.bankId, bankId)
+        )
+      )
+      .get();
   }
 }
-
-export const requisitionSchema = z.object({ id: z.string(), link: z.string() });
-export type Requisition = z.infer<typeof requisitionSchema>;

@@ -2,9 +2,10 @@ import {
   DataFunctionArgs,
   Session,
   createCookieSessionStorage,
+  redirect,
 } from "@remix-run/cloudflare";
 import { z } from "zod";
-import { bankSchema } from "~/routes/banks";
+import { bankSchema } from "~/routes/banks._index";
 import { getUserSession } from "./auth.server";
 import { DbApi } from "./dbApi";
 
@@ -215,13 +216,23 @@ export class GoCardlessApi {
     return allBanks.filter((bank) => chosenBankIds.includes(bank.id));
   }
 
-  async listAccounts(institutionId: string) {
+  async getRequisition(bankId: string) {
     const accessToken = (await this.getSession()).data.goCardless?.access;
     const api = DbApi.create({ context: this.context, request: this.request });
-    const requisition = await api.getRequisition(institutionId);
+    const session = await getUserSession({
+      context: this.context,
+      request: this.request,
+    });
+    const user = session ? await api.getUserByEmail(session.email) : null;
+
+    if (!user) {
+      throw redirect("/login");
+    }
+
+    const bankRelation = await api.getBankRelation(user.id, bankId);
 
     const response = await fetch(
-      `https://bankaccountdata.gocardless.com/api/v2/requisitions/${requisition.id}`,
+      `https://bankaccountdata.gocardless.com/api/v2/requisitions/${bankRelation.requisitionId}`,
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -231,14 +242,71 @@ export class GoCardlessApi {
     )
       .then((res) => res.json())
       .then((res) => {
-        return accountSchema.parse(res);
+        return requisitionSchema.parse(res);
       });
+
+    return response;
+  }
+
+  async createRequisition(institutionId: string) {
+    const goCardlessApi = await GoCardlessApi.create({
+      context: this.context,
+      request: this.request,
+    });
+    const goCardlessSession = await goCardlessApi.authorize();
+
+    const response = await fetch(
+      "https://bankaccountdata.gocardless.com/api/v2/requisitions/",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${goCardlessSession.data.goCardless?.access}`,
+        },
+        body: JSON.stringify({
+          redirect: "http://172.24.134.19:8788/api/authenticate-bank",
+          institution_id: institutionId,
+        }),
+      }
+    )
+      .then((res) => res.json())
+      .then((res) => bankLinkSchema.parse(res));
+
+    return response;
+  }
+
+  async getAccountBalances(accountId: string) {
+    const accessToken = (await this.getSession()).data.goCardless?.access;
+
+    const response = await fetch(
+      `https://bankaccountdata.gocardless.com/api/v2/accounts/${accountId}/balances/`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "content-type": "application/json",
+        },
+      }
+    )
+      .then((res) => res.json())
+      .then((res) => balanceSchema.parse(res).balances);
 
     return response;
   }
 }
 
-const accountSchema = z.object({
+const balanceSchema = z.object({
+  balances: z.array(
+    z.object({
+      balanceAmount: z.object({
+        amount: z.string(),
+        currency: z.string(),
+      }),
+      balanceType: z.enum(["openingBooked", "interimAvailable", "expected"]),
+    })
+  ),
+});
+
+const requisitionSchema = z.object({
   id: z.string(),
   created: z.string(),
   redirect: z.string(),
@@ -246,9 +314,12 @@ const accountSchema = z.object({
   institution_id: z.string(),
   agreement: z.string(),
   reference: z.string(),
-  accounts: z.unknown().array(),
+  accounts: z.string().array(),
   link: z.string(),
   ssn: z.string().nullable(),
   account_selection: z.boolean(),
   redirect_immediate: z.boolean(),
 });
+
+export const bankLinkSchema = z.object({ id: z.string(), link: z.string() });
+export type BankLink = z.infer<typeof bankLinkSchema>;
