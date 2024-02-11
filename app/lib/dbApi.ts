@@ -87,7 +87,7 @@ export class DbApi {
       context: this.context,
       request: this.request,
     });
-    const goCardlessSession = await goCardlessApi.getSession();
+    const goCardlessSession = await goCardlessApi.authorize();
 
     const response = await fetch(
       "https://bankaccountdata.gocardless.com/api/v2/requisitions/",

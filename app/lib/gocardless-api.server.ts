@@ -8,12 +8,19 @@ import { bankSchema } from "~/routes/banks";
 import { getUserSession } from "./auth.server";
 import { DbApi } from "./dbApi";
 
-export const goCardlessSessionSchema = z.object({
+export const accessTokenSchema = z.object({
   access: z.string(),
   access_expires: z.number(),
+});
+
+type AccessToken = z.infer<typeof accessTokenSchema>;
+
+export const refreshTokenSchema = z.object({
   refresh: z.string(),
   refresh_expires: z.number(),
 });
+
+type RefreshToken = z.infer<typeof refreshTokenSchema>;
 
 const goCardlessStorage = createCookieSessionStorage<GoCardlessSessionData>({
   cookie: {
@@ -27,7 +34,7 @@ const goCardlessStorage = createCookieSessionStorage<GoCardlessSessionData>({
 });
 
 type GoCardlessSessionData = {
-  goCardless: z.infer<typeof goCardlessSessionSchema>;
+  goCardless: AccessToken & Partial<RefreshToken>;
 };
 type GoCardlessSession = Session<GoCardlessSessionData>;
 
@@ -55,13 +62,32 @@ export class GoCardlessApi {
     return new GoCardlessApi({ ...args, session });
   }
 
+  async authorize() {
+    const session = await this.getSession();
+
+    // No session? Get new tokens
+    if (!session.data.goCardless) {
+      return this.getNewTokens();
+    }
+
+    // Access token not expired? Return session
+    if (!this.hasAccessTokenExpired(session)) {
+      return session;
+    }
+
+    // Refresh token not expired? Refresh token
+    if (!this.hasRefreshTokenExpired(session)) {
+      return this.refreshAccessToken();
+    }
+
+    // Refresh token expired? Get new tokens
+    return this.getNewTokens();
+  }
+
   async getSession(): Promise<GoCardlessSession> {
     const currentSession = await goCardlessStorage.getSession(
       this.request.headers.get("Cookie")
     );
-    if (!currentSession.data.goCardless) {
-      return this.getAccessToken();
-    }
 
     return currentSession;
   }
@@ -74,7 +100,7 @@ export class GoCardlessApi {
     return goCardlessStorage.commitSession(this.session);
   }
 
-  async getAccessToken(): Promise<GoCardlessSession> {
+  private async getNewTokens(): Promise<GoCardlessSession> {
     const response = await fetch(
       `https://bankaccountdata.gocardless.com/api/v2/token/new/`,
       {
@@ -89,12 +115,63 @@ export class GoCardlessApi {
       }
     )
       .then((res) => res.json())
-      .then((res) => goCardlessSessionSchema.parse(res));
+      .then((res) => accessTokenSchema.and(refreshTokenSchema).parse(res));
 
-    await this.setSession(response);
-    await goCardlessStorage.commitSession(this.session);
+    await this.setSession({
+      ...response,
+      access_expires: Date.now() + response.access_expires, // TODO: convert to ms
+      refresh_expires: Date.now() + response.refresh_expires, // TODO: convert to ms
+    });
 
     return this.session;
+  }
+
+  private async refreshAccessToken(): Promise<GoCardlessSession> {
+    const refreshToken = (await this.getSession()).data.goCardless?.refresh;
+    const response = await fetch(
+      `https://bankaccountdata.gocardless.com/api/v2/token/refresh/`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          refresh: refreshToken,
+        }),
+      }
+    )
+      .then((res) => res.json())
+      .then((res) => accessTokenSchema.parse(res));
+
+    await this.setSession({
+      ...this.session.data.goCardless,
+      access: response.access,
+      access_expires: Date.now() + response.access_expires, // TODO: convert to ms
+    });
+
+    return this.session;
+  }
+
+  private hasAccessTokenExpired(session: GoCardlessSession): boolean {
+    const accessToken = session.data.goCardless?.access;
+    const access_expires = session.data.goCardless?.access_expires;
+
+    if (accessToken && access_expires && access_expires > Date.now()) {
+      return false;
+    }
+
+    return true;
+  }
+
+  private hasRefreshTokenExpired(session: GoCardlessSession): boolean {
+    const refreshToken = session.data.goCardless?.refresh;
+    const refresh_expires = session.data.goCardless?.refresh_expires;
+
+    if (refreshToken && refresh_expires && refresh_expires > Date.now()) {
+      return false;
+    }
+
+    return true;
   }
 
   async getAllBanks() {
@@ -137,4 +214,41 @@ export class GoCardlessApi {
 
     return allBanks.filter((bank) => chosenBankIds.includes(bank.id));
   }
+
+  async listAccounts(institutionId: string) {
+    const accessToken = (await this.getSession()).data.goCardless?.access;
+    const api = DbApi.create({ context: this.context, request: this.request });
+    const requisition = await api.getRequisition(institutionId);
+
+    const response = await fetch(
+      `https://bankaccountdata.gocardless.com/api/v2/requisitions/${requisition.id}`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Accept: "application/json",
+        },
+      }
+    )
+      .then((res) => res.json())
+      .then((res) => {
+        return accountSchema.parse(res);
+      });
+
+    return response;
+  }
 }
+
+const accountSchema = z.object({
+  id: z.string(),
+  created: z.string(),
+  redirect: z.string(),
+  status: z.string(),
+  institution_id: z.string(),
+  agreement: z.string(),
+  reference: z.string(),
+  accounts: z.unknown().array(),
+  link: z.string(),
+  ssn: z.string().nullable(),
+  account_selection: z.boolean(),
+  redirect_immediate: z.boolean(),
+});

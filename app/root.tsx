@@ -25,6 +25,7 @@ import { flashSession } from "./lib/cookie.server";
 import { ThemeHead, ThemeProvider } from "./lib/theme-provider";
 import { getThemeSession } from "./lib/theme.server";
 import styles from "./tailwind.css";
+import { GoCardlessApi } from "./lib/gocardless-api.server";
 
 export const links: LinksFunction = () => [{ rel: "stylesheet", href: styles }];
 
@@ -46,10 +47,12 @@ export async function loader(args: LoaderArgs) {
   const fSession = await flashSession.getSession(cookieHeader);
   const toast = fSession.get("toast") || null;
   const user = await getUserSession(args);
+  const goCardlessApi = await GoCardlessApi.create(args);
+  await goCardlessApi.authorize();
 
   const headers = new Headers();
-
   headers.append("Set-Cookie", await flashSession.commitSession(fSession));
+  headers.append("Set-Cookie", await goCardlessApi.commitSession());
 
   return json(
     {
