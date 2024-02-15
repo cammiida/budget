@@ -18,12 +18,15 @@ export async function loader(args: LoaderArgs) {
 
   const requisition = await goCardlessApi.getRequisition(bankId);
 
-  const accounts = await Promise.all(
-    requisition?.accounts.map(async (accountId) => ({
-      accountId,
-      balances: await goCardlessApi.getAccountBalances(accountId),
-    }))
-  );
+  const accounts = !requisition.accounts
+    ? []
+    : await Promise.all(
+        requisition.accounts.map(async (accountId) => ({
+          accountId,
+          balances:
+            (await goCardlessApi.getAccountBalances(accountId)).balances ?? [],
+        }))
+      );
 
   return json({ bank, requisition, accounts });
 }
@@ -32,7 +35,7 @@ export default function Bank() {
   const { bank, accounts } = useLoaderData<typeof loader>();
 
   return (
-    <div className="text-white">
+    <div>
       <h1>{bank?.name}</h1>
       <ul className="flex flex-col gap-4">
         {accounts?.map((account) => (

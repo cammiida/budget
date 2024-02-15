@@ -1,5 +1,6 @@
 import { ActionArgs, LoaderArgs, json, redirect } from "@remix-run/cloudflare";
 import { Form, useFetcher, useLoaderData } from "@remix-run/react";
+import { Integration } from "generated-sources/gocardless";
 import { z } from "zod";
 import { requireLogin } from "~/lib/auth.server";
 import { DbApi } from "~/lib/dbApi";
@@ -42,6 +43,16 @@ export async function action(args: ActionArgs) {
   const userId = (await api.getUserByEmail(userEmail)).id;
   const requisition = await goCardlessApi.createRequisition(chosenBank);
 
+  if (!requisition.id) {
+    throw new Response("Failed to create requisition with id", { status: 500 });
+  }
+  // TODO: needed? Can some integrations not need authorization through a link?
+  if (!requisition.link) {
+    throw new Response("Failed to create requisition with link", {
+      status: 500,
+    });
+  }
+
   await api.addUserBankRelation({
     userId,
     bankId: chosenBank as string,
@@ -53,6 +64,7 @@ export async function action(args: ActionArgs) {
 
 function Banks() {
   const { allBanks: banks, chosenBanks } = useLoaderData<typeof loader>();
+  console.log(banks, chosenBanks);
 
   return (
     <div>
@@ -81,7 +93,7 @@ function Banks() {
 
 export default Banks;
 
-function Bank({ bank }: { bank: Bank }) {
+function Bank({ bank }: { bank: Integration }) {
   const fetcher = useFetcher();
   const isDeleting = fetcher.state !== "idle";
 
