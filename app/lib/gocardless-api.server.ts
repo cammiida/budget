@@ -255,4 +255,9 @@ export class GoCardlessApi {
     OpenAPI.TOKEN = (await this.getSession()).data.goCardless?.access;
     return AccountsService.retrieveAccountBalances(accountId);
   }
+
+  async getAccountDetails(accountId: string) {
+    OpenAPI.TOKEN = (await this.getSession()).data.goCardless?.access;
+    return AccountsService.retrieveAccountDetails(accountId);
+  }
 }

@@ -81,7 +81,9 @@ export default function App() {
       </head>
       <body>
         <Navbar />
-        <Outlet />
+        <div className="my-8 mx-6">
+          <Outlet />
+        </div>
         <ScrollRestoration />
         <Scripts />
         <LiveReload />

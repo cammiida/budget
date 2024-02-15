@@ -64,7 +64,6 @@ export async function action(args: ActionArgs) {
 
 function Banks() {
   const { allBanks: banks, chosenBanks } = useLoaderData<typeof loader>();
-  console.log(banks, chosenBanks);
 
   return (
     <div>

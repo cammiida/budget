@@ -21,11 +21,18 @@ export async function loader(args: LoaderArgs) {
   const accounts = !requisition.accounts
     ? []
     : await Promise.all(
-        requisition.accounts.map(async (accountId) => ({
-          accountId,
-          balances:
-            (await goCardlessApi.getAccountBalances(accountId)).balances ?? [],
-        }))
+        requisition.accounts.map(async (accountId) => {
+          const [accountDetails, accountBalances] = await Promise.all([
+            goCardlessApi.getAccountDetails(accountId),
+            goCardlessApi.getAccountBalances(accountId),
+          ]);
+
+          return {
+            accountId,
+            ...accountDetails.account,
+            balances: accountBalances.balances ?? [],
+          };
+        })
       );
 
   return json({ bank, requisition, accounts });
@@ -35,24 +42,32 @@ export default function Bank() {
   const { bank, accounts } = useLoaderData<typeof loader>();
 
   return (
-    <div>
-      <h1>{bank?.name}</h1>
-      <ul className="flex flex-col gap-4">
-        {accounts?.map((account) => (
-          <li key={account.accountId}>
-            <h2 className="text-lg">Account {account.accountId}</h2>
-            <ul>
-              {account.balances.map((balance) => (
-                <li key={balance.balanceType}>
-                  <h3>
-                    {balance.balanceType}: {balance.balanceAmount.amount}{" "}
-                    {balance.balanceAmount.currency}
-                  </h3>
-                </li>
-              ))}
-            </ul>
-          </li>
-        ))}
+    <div className="flex flex-col gap-4 items-center">
+      <h1 className="text-xl">{bank?.name}</h1>
+      <ul className="flex flex-col gap-4 max-w-lg min-w-[400px]">
+        {accounts?.map((account) => {
+          const balance = account.balances.find(
+            (balance) => balance.balanceType === "interimAvailable"
+          );
+          return (
+            <li
+              key={account.accountId}
+              className="flex flex-col gap-1 min-w-full shadow-lg p-4 rounded-md cursor-pointer bg-slate-100"
+            >
+              <div className="w-full flex justify-between">
+                <h2 className="text-lg">
+                  {/* splits on last , */}
+                  {account.name?.split(/\,(?=[^\,]+$)/)[0]}
+                </h2>
+                <h3 className="text-lg">
+                  ({balance?.balanceAmount.currency}
+                  {balance?.balanceAmount.amount})
+                </h3>
+              </div>
+              <small>{account.ownerName}</small>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );
