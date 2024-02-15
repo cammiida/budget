@@ -2,6 +2,7 @@
   "name": "budget-app-2",
   "sideEffects": false,
   "scripts": {
+    "postinstall": "npm run generate-clients",
     "build": "remix build",
     "dev:remix": "remix watch",
     "dev:wrangler": "cross-env NODE_ENV=development npm run wrangler",
@@ -10,7 +11,8 @@
     "typecheck": "tsc",
     "wrangler": "wrangler pages dev ./public --local --persist",
     "generate": "drizzle-kit generate:sqlite --schema=./app/lib/schema.ts",
-    "up": "drizzle-kit up:sqlite"
+    "up": "drizzle-kit up:sqlite",
+    "generate-clients": "openapi --input https://ob.gocardless.com/api/v2/swagger.json --output ./generated-sources/gocardless"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.0.4",
@@ -49,6 +51,7 @@
     "drizzle-kit": "^0.17.6",
     "eslint": "^8.38.0",
     "npm-run-all": "^4.1.5",
+    "openapi-typescript-codegen": "^0.27.0",
     "tailwindcss": "^3.3.1",
     "typescript": "^4.9.5",
     "wrangler": "^2.15.1"
