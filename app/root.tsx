@@ -16,16 +16,13 @@ import {
   useRouteError,
   useRouteLoaderData,
 } from "@remix-run/react";
-import clsx from "clsx";
 import { useEffect } from "react";
 import { Navbar } from "./components/ui/navbar";
 import { useToast } from "./components/ui/use-toast";
 import { getUserSession } from "./lib/auth.server";
 import { flashSession } from "./lib/cookie.server";
-import { ThemeHead, ThemeProvider } from "./lib/theme-provider";
-import { getThemeSession } from "./lib/theme.server";
-import styles from "./tailwind.css";
 import { GoCardlessApi } from "./lib/gocardless-api.server";
+import styles from "./tailwind.css";
 
 export const links: LinksFunction = () => [{ rel: "stylesheet", href: styles }];
 
@@ -43,7 +40,6 @@ export const meta: V2_MetaFunction = () => {
 
 export async function loader(args: LoaderArgs) {
   const cookieHeader = args.request.headers.get("Cookie");
-  const themeSession = await getThemeSession(args.request);
   const fSession = await flashSession.getSession(cookieHeader);
   const toast = fSession.get("toast") || null;
   const user = await getUserSession(args);
@@ -56,7 +52,6 @@ export async function loader(args: LoaderArgs) {
 
   return json(
     {
-      theme: themeSession.getTheme(),
       toast,
       ENV: {
         POSTHOG_API_KEY: args.context.POSTHOG_API_KEY, // TODO:
@@ -82,22 +77,19 @@ export default function App() {
 
   return (
     <html lang="en">
-      <ThemeProvider specifiedTheme={data.theme}>
-        <head>
-          <meta charSet="utf-8" />
-          <meta name="viewport" content="width=device-width,initial-scale=1" />
-          <Meta />
-          <Links />
-          <ThemeHead ssrTheme={Boolean(data.theme)} />
-        </head>
-        <body className={clsx(data.theme === "dark" ? "dark" : "light")}>
-          <Navbar />
-          <Outlet />
-          <ScrollRestoration />
-          <Scripts />
-          <LiveReload />
-        </body>
-      </ThemeProvider>
+      <head>
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <Meta />
+        <Links />
+      </head>
+      <body>
+        <Navbar />
+        <Outlet />
+        <ScrollRestoration />
+        <Scripts />
+        <LiveReload />
+      </body>
     </html>
   );
 }

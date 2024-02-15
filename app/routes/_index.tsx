@@ -1,7 +1,6 @@
 import { LoaderArgs, json, redirect } from "@remix-run/cloudflare";
 import { Outlet, useLoaderData } from "@remix-run/react";
 import { getUserSession, logout } from "~/lib/auth.server";
-import { Theme, useTheme } from "~/lib/theme-provider";
 
 const LINKS = [
   {
@@ -25,19 +24,11 @@ export async function loader(args: LoaderArgs) {
 
 export default function Index() {
   const { user } = useLoaderData<typeof loader>();
-  const [theme, setTheme] = useTheme();
-
-  const toggleTheme = () => {
-    setTheme((prevTheme) =>
-      prevTheme === Theme.LIGHT ? Theme.DARK : Theme.LIGHT
-    );
-  };
 
   return (
     <>
       <div className="overflow-x-hidden h-screen">
         <p className="">Hello {user.displayName}</p>
-        <button onClick={toggleTheme}>Toggle theme</button>
         <Outlet />
       </div>
     </>
