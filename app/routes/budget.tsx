@@ -1,4 +1,4 @@
-import { DataFunctionArgs, json } from "@remix-run/cloudflare";
+import { DataFunctionArgs, SerializeFrom, json } from "@remix-run/cloudflare";
 import { useLoaderData } from "@remix-run/react";
 import { CurrencyExchangeSchema } from "generated-sources/gocardless";
 
@@ -30,7 +30,7 @@ type Transaction = {
 type Category = {
   id: string;
   name: string;
-  budgeted: number;
+  budgeted?: number;
   currency: string;
 };
 
@@ -109,6 +109,15 @@ export async function loader({ request }: DataFunctionArgs) {
 
   const transactions: Transaction[] = [
     {
+      id: "0",
+      accountId: "1",
+      amount: 100,
+      bookingDateTime: new Date(),
+      valueDateTime: new Date(),
+      creditorName: "Tesco",
+      debtorName: "Camilla",
+    },
+    {
       id: "1",
       accountId: "1",
       categoryId: "1",
@@ -159,8 +168,28 @@ export async function loader({ request }: DataFunctionArgs) {
     categoryIds: categories.map((c) => c.id),
   };
 
+  const {
+    uncategorizedTransactions,
+    categorizedTransactions,
+  }: Record<string, Transaction[]> = {
+    uncategorizedTransactions: [],
+    categorizedTransactions: [],
+  };
+
+  transactions.forEach((transaction) => {
+    const matchingCategory = categories.find(
+      (category) => category.id === transaction.categoryId
+    );
+
+    if (matchingCategory) {
+      categorizedTransactions.push(transaction);
+    } else {
+      uncategorizedTransactions.push(transaction);
+    }
+  });
+
   const categoriesWithTransactions = categories.map((category) => {
-    const categoryTransactions = transactions.filter(
+    const categoryTransactions = categorizedTransactions.filter(
       (transaction) => transaction.categoryId === category.id
     );
     return {
@@ -170,16 +199,17 @@ export async function loader({ request }: DataFunctionArgs) {
   });
 
   return json({
-    budget: {
-      ...budget,
-      categories: categoriesWithTransactions,
-      accounts,
-    },
+    budget: budget,
+    accounts,
+    categories: categoriesWithTransactions,
+    uncategorizedTransactions,
   });
 }
 
 export default function Budget() {
-  const { budget } = useLoaderData<typeof loader>();
+  const { budget, categories, uncategorizedTransactions } =
+    useLoaderData<typeof loader>();
+  console.log({ categories });
 
   return (
     <div className="flex flex-col gap-4">
@@ -189,39 +219,72 @@ export default function Budget() {
         {budget.end.split("T")[0].replaceAll("-", ".")}
       </p>
       <ul className="space-y-8 bg-slate-50">
-        {budget.categories.map((category) => {
-          const spent = category.transactions.reduce(
-            (acc, transaction) => acc + transaction.amount,
-            0
-          );
-
+        <li>
+          <Category
+            category={{
+              id: "uncategorized",
+              name: "Uncategorized",
+              currency: "NOK",
+              transactions: uncategorizedTransactions,
+            }}
+          />
+        </li>
+        {categories.map((category) => {
           return (
             <li key={category.name} className="p-3">
-              <div className="flex w-full justify-between bold text-lg">
-                <h3>{category.name}</h3>
-                <p>{category.budgeted} budgeted</p>
-                <p>{spent} spent</p>
-              </div>
-              <ul className="px-8 space-y-4">
-                {category.transactions.map((transaction) => {
-                  return (
-                    <li
-                      key={transaction.id}
-                      className="w-full flex gap-2 justify-between items-end"
-                    >
-                      <div>
-                        <small>{transaction.bookingDateTime}</small>
-                        <p>{transaction.creditorName}</p>
-                      </div>
-                      <p>{transaction.amount}</p>
-                    </li>
-                  );
-                })}
-              </ul>
+              <Category category={category} />
             </li>
           );
         })}
       </ul>
     </div>
+  );
+}
+
+type ClientCategory = SerializeFrom<typeof loader>["categories"][0];
+type ClientTransaction = SerializeFrom<Transaction>;
+
+function Category({ category }: { category: ClientCategory }) {
+  const spent = category.transactions.reduce(
+    (acc, transaction) => acc + transaction.amount,
+    0
+  );
+
+  return (
+    <div>
+      <div className="flex w-full justify-between bold text-lg">
+        <h3>{category.name}</h3>
+        <p>{category.budgeted} budgeted</p>
+        <p>{spent} spent</p>
+      </div>
+      <ul className="px-8 space-y-4">
+        {category.transactions.map((transaction) => {
+          return (
+            <li
+              key={transaction.id}
+              className="w-full flex gap-2 justify-between items-end"
+            >
+              <Transaction transaction={transaction} />
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+export function Transaction({
+  transaction,
+}: {
+  transaction: ClientTransaction;
+}) {
+  return (
+    <>
+      <div>
+        <small>{transaction.bookingDateTime}</small>
+        <p>{transaction.creditorName}</p>
+      </div>
+      <p>{transaction.amount}</p>
+    </>
   );
 }
