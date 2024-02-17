@@ -16,7 +16,7 @@ export async function action(args: ActionArgs) {
       description: "Please check your email and password and try again.",
     });
 
-    return redirect("/login", {
+    return redirect("/auth/login", {
       headers: {
         "Set-Cookie": await flashSession.commitSession(fSession),
       },

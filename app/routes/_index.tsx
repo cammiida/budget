@@ -14,7 +14,7 @@ export async function loader(args: LoaderArgs) {
 
   if (!user) {
     await logout(args);
-    throw redirect("/login");
+    throw redirect("/auth/login");
   }
 
   return json({

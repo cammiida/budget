@@ -24,20 +24,20 @@ export function authenticate(args: DataFunctionArgs) {
     args.request,
     {
       successRedirect: "/",
-      failureRedirect: "/login",
+      failureRedirect: "/auth/login",
     }
   );
 }
 
 export function logout(args: DataFunctionArgs) {
   return createAuthenticator(args).logout(args.request, {
-    redirectTo: "/login",
+    redirectTo: "/auth/login",
   });
 }
 
 export async function requireLogin(args: DataFunctionArgs) {
   return createAuthenticator(args).isAuthenticated(args.request, {
-    failureRedirect: "/login",
+    failureRedirect: "/auth/login",
   });
 }
 

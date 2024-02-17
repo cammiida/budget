@@ -222,7 +222,7 @@ export class GoCardlessApi {
 
     const user = session ? await api.getUserByEmail(session.email) : null;
     if (!user) {
-      throw redirect("/login");
+      throw redirect("/auth/login");
     }
 
     const bankRelation = await api.getBankRelation(user.id, bankId);

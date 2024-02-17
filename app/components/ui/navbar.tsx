@@ -76,7 +76,7 @@ export function Navbar() {
                 </Link>
               </li>
               <li>
-                <Form method="post" action="/logout">
+                <Form method="post" action="/auth/logout">
                   <button
                     type="submit"
                     className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 dark:text-gray-200 dark:hover:text-white"
