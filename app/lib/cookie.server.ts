@@ -14,7 +14,7 @@ type SessionFlashData = {
 };
 
 export const createSessionStorage = (context: AppLoadContext) =>
-  createCookieSessionStorage<Profile, SessionFlashData>({
+  createCookieSessionStorage({
     cookie: {
       name: "__session",
       httpOnly: true,
@@ -26,7 +26,10 @@ export const createSessionStorage = (context: AppLoadContext) =>
     },
   });
 
-export const flashSession = createCookieSessionStorage({
+export const flashSession = createCookieSessionStorage<
+  Profile,
+  SessionFlashData
+>({
   cookie: {
     name: "PP_flash_session", // use any name you want here
     sameSite: "lax", // this helps with CSRF

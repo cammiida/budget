@@ -1,8 +1,8 @@
 import {
   LinksFunction,
-  LoaderArgs,
+  LoaderFunctionArgs,
+  MetaFunction,
   SerializeFrom,
-  V2_MetaFunction,
   json,
 } from "@remix-run/cloudflare";
 import {
@@ -12,13 +12,10 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
-  useLoaderData,
   useRouteError,
   useRouteLoaderData,
 } from "@remix-run/react";
-import { useEffect } from "react";
 import { Navbar } from "./components/ui/navbar";
-import { useToast } from "./components/ui/use-toast";
 import { getUserSession } from "./lib/auth.server";
 import { flashSession } from "./lib/cookie.server";
 import { GoCardlessApi } from "./lib/gocardless-api.server";
@@ -26,7 +23,7 @@ import styles from "./tailwind.css";
 
 export const links: LinksFunction = () => [{ rel: "stylesheet", href: styles }];
 
-export const meta: V2_MetaFunction = () => {
+export const meta: MetaFunction = () => {
   return [
     {
       title: "Camilla's Budget App",
@@ -34,10 +31,10 @@ export const meta: V2_MetaFunction = () => {
   ];
 };
 
-export async function loader(args: LoaderArgs) {
+export async function loader(args: LoaderFunctionArgs) {
   const cookieHeader = args.request.headers.get("Cookie");
   const fSession = await flashSession.getSession(cookieHeader);
-  const toast = fSession.get("toast") || null;
+  const toast = fSession.get("error") || null;
   const user = await getUserSession(args);
   const goCardlessApi = await GoCardlessApi.create(args);
   await goCardlessApi.authorize();
@@ -49,10 +46,6 @@ export async function loader(args: LoaderArgs) {
   return json(
     {
       toast,
-      ENV: {
-        POSTHOG_API_KEY: args.context.POSTHOG_API_KEY, // TODO:
-        POSTHOG_API_HOST: args.context.POSTHOG_API_HOST,
-      },
       user,
     },
     {
@@ -62,14 +55,7 @@ export async function loader(args: LoaderArgs) {
 }
 
 export default function App() {
-  const data = useLoaderData<typeof loader>();
-  const { toast } = useToast();
-
-  useEffect(() => {
-    if (data.toast) {
-      toast(data.toast);
-    }
-  }, [data.toast]);
+  // TODO: show flash message
 
   return (
     <html lang="en">

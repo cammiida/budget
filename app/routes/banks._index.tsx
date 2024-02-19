@@ -1,4 +1,9 @@
-import { ActionArgs, LoaderArgs, json, redirect } from "@remix-run/cloudflare";
+import {
+  ActionFunctionArgs,
+  LoaderFunctionArgs,
+  json,
+  redirect,
+} from "@remix-run/cloudflare";
 import { Form, useFetcher, useLoaderData } from "@remix-run/react";
 import { Integration } from "generated-sources/gocardless";
 import { z } from "zod";
@@ -16,7 +21,7 @@ export const bankSchema = z.object({
 });
 export type Bank = z.infer<typeof bankSchema>;
 
-export async function loader(args: LoaderArgs) {
+export async function loader(args: LoaderFunctionArgs) {
   const session = await requireLogin(args);
 
   const api = DbApi.create(args);
@@ -32,7 +37,7 @@ export async function loader(args: LoaderArgs) {
   );
 }
 
-export async function action(args: ActionArgs) {
+export async function action(args: ActionFunctionArgs) {
   const userEmail = (await requireLogin(args)).email;
 
   const api = DbApi.create(args);
@@ -40,7 +45,12 @@ export async function action(args: ActionArgs) {
 
   const formData = await args.request.formData();
   const chosenBank = formData.get("bank") as string;
-  const userId = (await api.getUserByEmail(userEmail)).id;
+  const userId = (await api.getUserByEmail(userEmail))?.id;
+  // TODO: handle error
+  if (!userId) {
+    throw new Response("User not found", { status: 404 });
+  }
+
   const requisition = await goCardlessApi.createRequisition(chosenBank);
 
   if (!requisition.id) {

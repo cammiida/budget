@@ -1,6 +1,6 @@
-import type { DataFunctionArgs } from "@remix-run/cloudflare";
+import { LoaderFunctionArgs } from "@remix-run/cloudflare";
 import { authenticate } from "~/lib/auth.server";
 
-export function loader(args: DataFunctionArgs) {
+export function loader(args: LoaderFunctionArgs) {
   return authenticate(args);
 }

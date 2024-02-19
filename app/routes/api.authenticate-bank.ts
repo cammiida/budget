@@ -1,14 +1,14 @@
-import { ActionArgs, json } from "@remix-run/cloudflare";
+import { ActionFunctionArgs, json } from "@remix-run/cloudflare";
 import { z } from "zod";
-import { DbApi } from "~/lib/dbApi";
 import { requireLogin } from "~/lib/auth.server";
+import { DbApi } from "~/lib/dbApi";
 import { GoCardlessApi } from "~/lib/gocardless-api.server";
 
 export async function loader(request: Request) {
   return json({ message: "Hello, world!" });
 }
 
-export async function action(args: ActionArgs) {
+export async function action(args: ActionFunctionArgs) {
   const session = await requireLogin(args);
   const goCardlessApi = await GoCardlessApi.create(args);
   const goCardlessSession = await goCardlessApi.getSession();

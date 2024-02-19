@@ -1,8 +1,14 @@
-import { LoaderArgs, json } from "@remix-run/cloudflare";
+import { LoaderFunctionArgs, json } from "@remix-run/cloudflare";
 import { useLoaderData } from "@remix-run/react";
+import { BalanceSchema, DetailSchema } from "generated-sources/gocardless";
 import { GoCardlessApi } from "~/lib/gocardless-api.server";
 
-export async function loader(args: LoaderArgs) {
+type ServerAccount = {
+  accountId: string;
+  balances: BalanceSchema[];
+} & DetailSchema;
+
+export async function loader(args: LoaderFunctionArgs) {
   const bankId = args.params.bankId;
 
   if (!bankId) {
@@ -16,24 +22,32 @@ export async function loader(args: LoaderArgs) {
   // TODO: api call to get bank by id
   const bank = chosenBanks.find((it) => it.id === bankId);
 
+  if (!bank) {
+    throw new Response("Bank not found", { status: 404 });
+  }
+
   const requisition = await goCardlessApi.getRequisition(bankId);
 
-  const accounts = !requisition.accounts
-    ? []
-    : await Promise.all(
-        requisition.accounts.map(async (accountId) => {
-          const [accountDetails, accountBalances] = await Promise.all([
-            goCardlessApi.getAccountDetails(accountId),
-            goCardlessApi.getAccountBalances(accountId),
-          ]);
+  if (!requisition) {
+    throw new Response("Requisition not found", { status: 404 });
+  }
 
-          return {
-            accountId,
-            ...accountDetails.account,
-            balances: accountBalances.balances ?? [],
-          };
-        })
-      );
+  async function getAccountDetails(accountId: string): Promise<ServerAccount> {
+    const [accountDetails, accountBalances] = await Promise.all([
+      goCardlessApi.getAccountDetails(accountId),
+      goCardlessApi.getAccountBalances(accountId),
+    ]);
+
+    return {
+      accountId,
+      ...accountDetails.account,
+      balances: accountBalances.balances ?? [],
+    };
+  }
+
+  const accounts: ServerAccount[] = await Promise.all(
+    requisition.accounts?.map(getAccountDetails) ?? []
+  );
 
   return json({ bank, requisition, accounts });
 }
@@ -41,14 +55,20 @@ export async function loader(args: LoaderArgs) {
 export default function Bank() {
   const { bank, accounts } = useLoaderData<typeof loader>();
 
+  // TODO: fix types. accounts should not be null[]
+  const filteredAccounts = accounts.filter(
+    (it) => it !== null
+  ) as ServerAccount[];
+
   return (
     <div className="flex flex-col gap-4 items-center">
       <h1 className="text-xl">{bank?.name}</h1>
       <ul className="flex flex-col gap-4 max-w-lg min-w-[400px]">
-        {accounts?.map((account) => {
+        {filteredAccounts.map((account) => {
           const balance = account.balances.find(
             (balance) => balance.balanceType === "interimAvailable"
           );
+
           return (
             <li
               key={account.accountId}

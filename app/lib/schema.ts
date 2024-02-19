@@ -1,4 +1,4 @@
-import type { InferModel } from "drizzle-orm";
+import { InferInsertModel, InferSelectModel } from "drizzle-orm";
 import {
   foreignKey,
   integer,
@@ -22,8 +22,8 @@ export const users = sqliteTable(
   })
 );
 
-export type User = InferModel<typeof users>;
-export type NewUser = InferModel<typeof users, "insert">;
+export type User = InferSelectModel<typeof users>;
+export type NewUser = InferInsertModel<typeof users>;
 
 export const usersBanksRelations = sqliteTable(
   "users_banks_relations",
@@ -42,8 +42,5 @@ export const usersBanksRelations = sqliteTable(
   })
 );
 
-export type UserBankRelation = InferModel<typeof usersBanksRelations>;
-export type NewUserBankRelation = InferModel<
-  typeof usersBanksRelations,
-  "insert"
->;
+export type UserBankRelation = InferSelectModel<typeof usersBanksRelations>;
+export type NewUserBankRelation = InferInsertModel<typeof usersBanksRelations>;

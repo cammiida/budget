@@ -1,4 +1,3 @@
-import { DataFunctionArgs } from "@remix-run/cloudflare";
 import { Authenticator } from "remix-auth";
 import { Profile, createSessionStorage } from "./cookie.server";
 
@@ -6,10 +5,9 @@ import {
   GoogleStrategyDefaultName,
   createGoogleStrategy,
 } from "./google-strategy.server";
+import { ServerArgs } from "./types";
 
-function createAuthenticator(
-  args: Pick<DataFunctionArgs, "context" | "request">
-) {
+function createAuthenticator(args: ServerArgs) {
   const authenticator = new Authenticator<Profile>(
     createSessionStorage(args.context)
   );
@@ -18,7 +16,7 @@ function createAuthenticator(
   return authenticator;
 }
 
-export function authenticate(args: DataFunctionArgs) {
+export function authenticate(args: ServerArgs) {
   return createAuthenticator(args).authenticate(
     GoogleStrategyDefaultName,
     args.request,
@@ -29,20 +27,18 @@ export function authenticate(args: DataFunctionArgs) {
   );
 }
 
-export function logout(args: DataFunctionArgs) {
+export function logout(args: ServerArgs) {
   return createAuthenticator(args).logout(args.request, {
     redirectTo: "/auth/login",
   });
 }
 
-export async function requireLogin(args: DataFunctionArgs) {
+export async function requireLogin(args: ServerArgs) {
   return createAuthenticator(args).isAuthenticated(args.request, {
     failureRedirect: "/auth/login",
   });
 }
 
-export async function getUserSession(
-  args: Pick<DataFunctionArgs, "context" | "request">
-) {
+export async function getUserSession(args: ServerArgs) {
   return createAuthenticator(args).isAuthenticated(args.request);
 }

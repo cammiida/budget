@@ -1,32 +1,27 @@
-import { AppLoadContext, DataFunctionArgs } from "@remix-run/cloudflare";
-import { getDbFromContext } from "./db.service.server";
+import { AppLoadContext } from "@remix-run/cloudflare";
+import { and, eq } from "drizzle-orm";
 import { DrizzleD1Database } from "drizzle-orm/d1";
+import { getDbFromContext } from "./db.service.server";
 import {
   NewUserBankRelation,
   User,
   users,
   usersBanksRelations,
 } from "./schema";
-import { and, eq } from "drizzle-orm";
-import { GoCardlessApi } from "./gocardless-api.server";
-import { z } from "zod";
-import { getUserSession } from "./auth.server";
+import { ServerArgs } from "./types";
 
 export class DbApi {
   db: DrizzleD1Database;
-  context: DataFunctionArgs["context"];
-  request: DataFunctionArgs["request"];
+  context: AppLoadContext;
+  request: Request;
 
-  private constructor({
-    context,
-    request,
-  }: Pick<DataFunctionArgs, "context" | "request">) {
+  private constructor({ context, request }: ServerArgs) {
     this.db = getDbFromContext(context);
     this.context = context;
     this.request = request;
   }
 
-  static create(args: Pick<DataFunctionArgs, "context" | "request">) {
+  static create(args: ServerArgs) {
     return new DbApi(args);
   }
 
@@ -34,11 +29,11 @@ export class DbApi {
     return this.db.select().from(users).all();
   }
 
-  async getUserById(id: number): Promise<User> {
+  async getUserById(id: number): Promise<User | undefined> {
     return this.db.select().from(users).where(eq(users.id, id)).get();
   }
 
-  async getUserByEmail(email: string): Promise<User> {
+  async getUserByEmail(email: string): Promise<User | undefined> {
     return this.db.select().from(users).where(eq(users.email, email)).get();
   }
 

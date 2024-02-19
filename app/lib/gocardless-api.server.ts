@@ -1,5 +1,5 @@
 import {
-  DataFunctionArgs,
+  AppLoadContext,
   Session,
   createCookieSessionStorage,
   redirect,
@@ -13,6 +13,7 @@ import {
 import { z } from "zod";
 import { getUserSession } from "./auth.server";
 import { DbApi } from "./dbApi";
+import { ServerArgs } from "./types";
 
 export const accessTokenSchema = z.object({
   access: z.string(),
@@ -45,15 +46,15 @@ type GoCardlessSessionData = {
 type GoCardlessSession = Session<GoCardlessSessionData>;
 
 export class GoCardlessApi {
-  private request: DataFunctionArgs["request"];
-  private context: DataFunctionArgs["context"];
+  private request: Request;
+  private context: AppLoadContext;
   private session: GoCardlessSession;
 
   private constructor({
     request,
     context,
     session,
-  }: Pick<DataFunctionArgs, "request" | "context"> & {
+  }: ServerArgs & {
     session: GoCardlessSession;
   }) {
     this.request = request;
@@ -61,7 +62,7 @@ export class GoCardlessApi {
     this.session = session;
   }
 
-  static async create(args: Pick<DataFunctionArgs, "request" | "context">) {
+  static async create(args: ServerArgs) {
     const session = await goCardlessStorage.getSession(
       args.request.headers.get("Cookie")
     );
@@ -208,6 +209,11 @@ export class GoCardlessApi {
       context: this.context,
     });
     const user = await userApi.getUserByEmail(session.email);
+    // TODO: handle better
+    if (!user) {
+      throw new Error("User not found");
+    }
+
     const chosenBankIds = await userApi.getAllBanksForUser(user.id);
 
     return allBanks.filter((bank) => chosenBankIds.includes(bank.id));

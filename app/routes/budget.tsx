@@ -1,4 +1,4 @@
-import { DataFunctionArgs, SerializeFrom, json } from "@remix-run/cloudflare";
+import { LoaderFunctionArgs, SerializeFrom, json } from "@remix-run/cloudflare";
 import { useLoaderData } from "@remix-run/react";
 import { CurrencyExchangeSchema } from "generated-sources/gocardless";
 
@@ -43,7 +43,7 @@ type Budget = {
   end: Date;
 };
 
-export async function loader({ request }: DataFunctionArgs) {
+export async function loader({ request }: LoaderFunctionArgs) {
   const url = new URL(request.url);
   const budgetId = url.searchParams.get("budgetId");
 

@@ -1,4 +1,3 @@
-import type { DataFunctionArgs } from "@remix-run/cloudflare";
 import { eq } from "drizzle-orm";
 import type { StrategyVerifyCallback } from "remix-auth";
 import type {
@@ -9,10 +8,9 @@ import { OAuth2Strategy } from "remix-auth-oauth2";
 import { Profile } from "./cookie.server";
 import { getDbFromContext } from "./db.service.server";
 import { users } from "./schema";
+import { ServerArgs } from "./types";
 
-export function createGoogleStrategy(
-  args: Pick<DataFunctionArgs, "context" | "request">
-) {
+export function createGoogleStrategy(args: ServerArgs) {
   const url = new URL(args.request.url);
 
   // So that redirects work for all three variants
