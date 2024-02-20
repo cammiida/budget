@@ -7,6 +7,5 @@ declare module "@remix-run/cloudflare" {
     waitUntil: EventContext<unknown, unknown, unknown>["waitUntil"];
     env: z.infer<typeof envSchema>;
     db: D1Database;
-    kv: KVNamespace;
   }
 }
