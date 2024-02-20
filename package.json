@@ -2,7 +2,7 @@
   "name": "budget-app-2",
   "sideEffects": false,
   "scripts": {
-    "postinstall": "npm run generate-clients",
+    "postinstall": "npm run generate-clients && patch-package",
     "build": "remix build",
     "dev:remix": "remix watch",
     "dev:wrangler": "cross-env NODE_ENV=development npm run wrangler",
@@ -46,6 +46,7 @@
     "eslint": "^8.56.0",
     "npm-run-all": "^4.1.5",
     "openapi-typescript-codegen": "^0.27.0",
+    "patch-package": "^8.0.0",
     "remix-flat-routes": "^0.6.4",
     "tailwindcss": "^3.4.1",
     "typescript": "^5.3.3",
