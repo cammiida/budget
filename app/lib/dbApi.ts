@@ -1,4 +1,4 @@
-import { AppLoadContext } from "@remix-run/cloudflare";
+import { AppLoadContext, redirect } from "@remix-run/cloudflare";
 import { and, eq } from "drizzle-orm";
 import { DrizzleD1Database } from "drizzle-orm/d1";
 import { getDbFromContext } from "./db.service.server";
@@ -9,6 +9,7 @@ import {
   usersBanksRelations,
 } from "./schema";
 import { ServerArgs } from "./types";
+import { requireLogin } from "./auth.server";
 
 export class DbApi {
   db: DrizzleD1Database;
@@ -41,36 +42,36 @@ export class DbApi {
     return this.db.select().from(usersBanksRelations).all();
   }
 
-  async addUserBankRelation(newRelation: NewUserBankRelation) {
-    const user = await this.getUserById(newRelation.userId);
-
-    if (!user) {
-      throw new Error(`User with id ${newRelation.userId} not found`);
-    }
+  async addUserBankRelation(newRelation: Omit<NewUserBankRelation, "userId">) {
+    const user = await this.requireUser();
 
     return this.db
       .insert(usersBanksRelations)
-      .values(newRelation)
+      .values({ ...newRelation, userId: user.id })
       .onConflictDoNothing()
       .returning()
       .get();
   }
 
-  async getAllBanksForUser(userId: number): Promise<string[]> {
+  async getAllBanksForUser(): Promise<string[]> {
+    const user = await this.requireUser();
+
     const relations = await this.db
       .select()
       .from(usersBanksRelations)
-      .where(eq(usersBanksRelations.userId, userId))
+      .where(eq(usersBanksRelations.userId, user.id))
       .all();
     return relations.map((relation) => relation.bankId);
   }
 
-  async removeBankForUser(userId: number, bankId: string) {
+  async removeBank(bankId: string) {
+    const user = await this.requireUser();
+
     return this.db
       .delete(usersBanksRelations)
       .where(
         and(
-          eq(usersBanksRelations.userId, userId),
+          eq(usersBanksRelations.userId, user.id),
           eq(usersBanksRelations.bankId, bankId)
         )
       )
@@ -78,16 +79,32 @@ export class DbApi {
       .get();
   }
 
-  async getBankRelation(userId: number, bankId: string) {
+  async getBankRelation(bankId: string) {
+    const user = await this.requireUser();
+
     return this.db
       .select()
       .from(usersBanksRelations)
       .where(
         and(
-          eq(usersBanksRelations.userId, userId),
+          eq(usersBanksRelations.userId, user.id),
           eq(usersBanksRelations.bankId, bankId)
         )
       )
       .get();
+  }
+
+  async requireUser() {
+    const userSession = await requireLogin({
+      request: this.request,
+      context: this.context,
+    });
+    const user = await this.getUserByEmail(userSession.email);
+
+    if (!user) {
+      throw redirect("/auth/login");
+    }
+
+    return user;
   }
 }

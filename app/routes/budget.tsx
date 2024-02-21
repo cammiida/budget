@@ -1,6 +1,7 @@
 import { LoaderFunctionArgs, SerializeFrom, json } from "@remix-run/cloudflare";
 import { useLoaderData } from "@remix-run/react";
 import { CurrencyExchangeSchema } from "generated-sources/gocardless";
+import { DbApi } from "~/lib/dbApi";
 
 type Account = {
   id: string;
@@ -43,7 +44,7 @@ type Budget = {
   end: Date;
 };
 
-export async function loader({ request }: LoaderFunctionArgs) {
+export async function loader({ request, context }: LoaderFunctionArgs) {
   const url = new URL(request.url);
   const budgetId = url.searchParams.get("budgetId");
 
@@ -197,6 +198,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
       transactions: categoryTransactions,
     };
   });
+
+  await DbApi.create({ request, context }).requireUser();
 
   return json({
     budget: budget,

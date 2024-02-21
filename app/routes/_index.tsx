@@ -1,6 +1,6 @@
-import { LoaderFunctionArgs, json, redirect } from "@remix-run/cloudflare";
+import { LoaderFunctionArgs, json } from "@remix-run/cloudflare";
 import { Outlet, useLoaderData } from "@remix-run/react";
-import { getUserSession, logout } from "~/lib/auth.server";
+import { DbApi } from "~/lib/dbApi";
 
 const LINKS = [
   {
@@ -10,12 +10,7 @@ const LINKS = [
 ];
 
 export async function loader(args: LoaderFunctionArgs) {
-  const user = await getUserSession(args);
-
-  if (!user) {
-    await logout(args);
-    throw redirect("/auth/login");
-  }
+  const user = await DbApi.create(args).requireUser();
 
   return json({
     user,
@@ -28,7 +23,7 @@ export default function Index() {
   return (
     <>
       <div className="overflow-x-hidden h-screen">
-        <p className="">Hello {user.displayName}</p>
+        <p className="">Hello {user.name}</p>
         <Outlet />
       </div>
     </>

@@ -194,44 +194,23 @@ export class GoCardlessApi {
   }
 
   async getChosenBanks() {
-    const session = await getUserSession({
-      request: this.request,
-      context: this.context,
-    });
-
-    if (!session) {
-      throw new Error("User not found");
-    }
-
-    const allBanks = await this.getAllBanks();
     const userApi = DbApi.create({
       request: this.request,
       context: this.context,
     });
-    const user = await userApi.getUserByEmail(session.email);
-    // TODO: handle better
-    if (!user) {
-      throw new Error("User not found");
-    }
 
-    const chosenBankIds = await userApi.getAllBanksForUser(user.id);
+    const [allBanks, chosenBankIds] = await Promise.all([
+      this.getAllBanks(),
+      userApi.getAllBanksForUser(),
+    ]);
 
     return allBanks.filter((bank) => chosenBankIds.includes(bank.id));
   }
 
   async getRequisition(bankId: string) {
     const api = DbApi.create({ context: this.context, request: this.request });
-    const session = await getUserSession({
-      context: this.context,
-      request: this.request,
-    });
 
-    const user = session ? await api.getUserByEmail(session.email) : null;
-    if (!user) {
-      throw redirect("/auth/login");
-    }
-
-    const bankRelation = await api.getBankRelation(user.id, bankId);
+    const bankRelation = await api.getBankRelation(bankId);
     if (!bankRelation) {
       throw new Response("Bank relation not found", { status: 404 });
     }

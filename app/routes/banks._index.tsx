@@ -38,18 +38,10 @@ export async function loader(args: LoaderFunctionArgs) {
 }
 
 export async function action(args: ActionFunctionArgs) {
-  const userEmail = (await requireLogin(args)).email;
-
-  const api = DbApi.create(args);
   const goCardlessApi = await GoCardlessApi.create(args);
 
   const formData = await args.request.formData();
   const chosenBank = formData.get("bank") as string;
-  const userId = (await api.getUserByEmail(userEmail))?.id;
-  // TODO: handle error
-  if (!userId) {
-    throw new Response("User not found", { status: 404 });
-  }
 
   const requisition = await goCardlessApi.createRequisition(chosenBank);
 
@@ -63,8 +55,7 @@ export async function action(args: ActionFunctionArgs) {
     });
   }
 
-  await api.addUserBankRelation({
-    userId,
+  await DbApi.create(args).addUserBankRelation({
     bankId: chosenBank as string,
     requisitionId: requisition.id,
   });

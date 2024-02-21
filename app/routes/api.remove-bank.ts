@@ -1,16 +1,7 @@
-import { ActionFunctionArgs, json, redirect } from "@remix-run/cloudflare";
-import { requireLogin } from "~/lib/auth.server";
+import { ActionFunctionArgs, json } from "@remix-run/cloudflare";
 import { DbApi } from "~/lib/dbApi";
 
 export async function action(args: ActionFunctionArgs) {
-  const session = await requireLogin(args);
-  const api = DbApi.create(args);
-  const user = await api.getUserByEmail(session.email);
-  // TODO: correct flow?
-  if (!user) {
-    throw redirect("/auth/login");
-  }
-
   const bankId = (await args.request.formData()).get("bank") as string;
 
   if (!bankId) {
@@ -19,7 +10,7 @@ export async function action(args: ActionFunctionArgs) {
     });
   }
 
-  const result = await api.removeBankForUser(user.id, bankId);
+  const result = await DbApi.create(args).removeBank(bankId);
 
   return json({ result });
 }
