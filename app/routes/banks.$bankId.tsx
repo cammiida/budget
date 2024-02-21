@@ -55,16 +55,11 @@ export async function loader(args: LoaderFunctionArgs) {
 export default function Bank() {
   const { bank, accounts } = useLoaderData<typeof loader>();
 
-  // TODO: fix types. accounts should not be null[]
-  const filteredAccounts = accounts.filter(
-    (it) => it !== null
-  ) as ServerAccount[];
-
   return (
     <div className="flex flex-col gap-4 items-center">
       <h1 className="text-xl">{bank?.name}</h1>
       <ul className="flex flex-col gap-4 max-w-lg min-w-[400px]">
-        {filteredAccounts.map((account) => {
+        {accounts.map((account) => {
           const balance = account.balances.find(
             (balance) => balance.balanceType === "interimAvailable"
           );
