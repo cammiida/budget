@@ -5,37 +5,23 @@
     {
       "idx": 0,
       "version": "5",
-      "when": 1700944822756,
-      "tag": "0000_silent_smasher",
-      "breakpoints": false
+      "when": 1708518175955,
+      "tag": "0000_fixed_gideon",
+      "breakpoints": true
     },
     {
       "idx": 1,
       "version": "5",
-      "when": 1707134294751,
-      "tag": "0001_magenta_the_renegades",
-      "breakpoints": false
+      "when": 1708609555900,
+      "tag": "0001_loud_forge",
+      "breakpoints": true
     },
     {
       "idx": 2,
       "version": "5",
-      "when": 1707137659033,
-      "tag": "0002_medical_speed_demon",
-      "breakpoints": false
-    },
-    {
-      "idx": 3,
-      "version": "5",
-      "when": 1707147415266,
-      "tag": "0003_dizzy_whistler",
-      "breakpoints": false
-    },
-    {
-      "idx": 4,
-      "version": "5",
-      "when": 1707147446366,
-      "tag": "0004_curly_redwing",
-      "breakpoints": false
+      "when": 1708609590826,
+      "tag": "0002_orange_norman_osborn",
+      "breakpoints": true
     }
   ]
 }

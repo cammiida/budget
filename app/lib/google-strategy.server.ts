@@ -7,7 +7,7 @@ import type {
 import { OAuth2Strategy } from "remix-auth-oauth2";
 import { Profile } from "./cookie.server";
 import { getDbFromContext } from "./db.service.server";
-import { users } from "./schema";
+import { user } from "./schema";
 import { ServerArgs } from "./types";
 
 export function createGoogleStrategy(args: ServerArgs) {
@@ -31,8 +31,8 @@ export function createGoogleStrategy(args: ServerArgs) {
 
       const existingUser = await db
         .select()
-        .from(users)
-        .where(eq(users.email, email))
+        .from(user)
+        .where(eq(user.email, email))
         .limit(1)
         .get();
 

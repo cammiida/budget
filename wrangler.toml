@@ -1,7 +1,8 @@
 compatibility_date = "2022-04-05"
-compatibility_flags = ["streams_enable_constructors"]
 
 [[ d1_databases ]]
-binding = "DB" # i.e. available in your Worker on env.DB
+binding = "DB" # i.e. available in your Worker on env.DB. Should match preview_database_id for local dev
+preview_database_id = "DB"
 database_name = "budget"
 database_id = "bea96e4d-6885-4dc7-8de4-d4a6a6fc20dc"
+migrations_dir = "./drizzle"

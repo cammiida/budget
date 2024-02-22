@@ -1,15 +1,10 @@
 import { AppLoadContext, redirect } from "@remix-run/cloudflare";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { DrizzleD1Database } from "drizzle-orm/d1";
-import { getDbFromContext } from "./db.service.server";
-import {
-  NewUserBankRelation,
-  User,
-  users,
-  usersBanksRelations,
-} from "./schema";
-import { ServerArgs } from "./types";
 import { requireLogin } from "./auth.server";
+import { getDbFromContext } from "./db.service.server";
+import { Bank, NewBank, User, account, bank, user } from "./schema";
+import { ServerArgs } from "./types";
 
 export class DbApi {
   db: DrizzleD1Database;
@@ -27,71 +22,66 @@ export class DbApi {
   }
 
   async getAllUsers(): Promise<User[]> {
-    return this.db.select().from(users).all();
+    return this.db.select().from(user).all();
   }
 
   async getUserById(id: number): Promise<User | undefined> {
-    return this.db.select().from(users).where(eq(users.id, id)).get();
+    return this.db.select().from(user).where(eq(user.id, id)).get();
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    return this.db.select().from(users).where(eq(users.email, email)).get();
+    return this.db.select().from(user).where(eq(user.email, email)).get();
   }
 
-  async getAllUserBankRelations() {
-    return this.db.select().from(usersBanksRelations).all();
+  async getBanks(): Promise<Bank[]> {
+    const user = await this.requireUser();
+
+    return await this.db
+      .select()
+      .from(bank)
+      .where(eq(bank.userId, user.id))
+      .all();
   }
 
-  async addUserBankRelation(newRelation: Omit<NewUserBankRelation, "userId">) {
+  async addBank(newBank: Omit<NewBank, "userId">) {
     const user = await this.requireUser();
 
     return this.db
-      .insert(usersBanksRelations)
-      .values({ ...newRelation, userId: user.id })
+      .insert(bank)
+      .values({ ...newBank, userId: user.id })
       .onConflictDoNothing()
       .returning()
       .get();
-  }
-
-  async getAllBanksForUser(): Promise<string[]> {
-    const user = await this.requireUser();
-
-    const relations = await this.db
-      .select()
-      .from(usersBanksRelations)
-      .where(eq(usersBanksRelations.userId, user.id))
-      .all();
-    return relations.map((relation) => relation.bankId);
   }
 
   async removeBank(bankId: string) {
     const user = await this.requireUser();
 
     return this.db
-      .delete(usersBanksRelations)
-      .where(
-        and(
-          eq(usersBanksRelations.userId, user.id),
-          eq(usersBanksRelations.bankId, bankId)
-        )
-      )
+      .delete(bank)
+      .where(and(eq(bank.userId, user.id), eq(bank.bankId, bankId)))
       .returning()
       .get();
   }
 
-  async getBankRelation(bankId: string) {
+  async getBank(bankId: string) {
     const user = await this.requireUser();
 
     return this.db
       .select()
-      .from(usersBanksRelations)
-      .where(
-        and(
-          eq(usersBanksRelations.userId, user.id),
-          eq(usersBanksRelations.bankId, bankId)
-        )
-      )
+      .from(bank)
+      .where(and(eq(bank.userId, user.id), eq(bank.bankId, bankId)))
       .get();
+  }
+
+  async getAllAccounts(bankId: string) {
+    const user = await this.requireUser();
+
+    return this.db
+      .select()
+      .from(account)
+      .where(and(eq(account.userId, user.id), eq(account.bankId, bankId)))
+      .all();
   }
 
   async requireUser() {

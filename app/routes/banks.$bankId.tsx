@@ -1,12 +1,7 @@
 import { LoaderFunctionArgs, json } from "@remix-run/cloudflare";
-import { useLoaderData } from "@remix-run/react";
-import { BalanceSchema, DetailSchema } from "generated-sources/gocardless";
+import { Outlet, useFetcher, useLoaderData, useParams } from "@remix-run/react";
+import { DbApi } from "~/lib/dbApi";
 import { GoCardlessApi } from "~/lib/gocardless-api.server";
-
-type ServerAccount = {
-  accountId: string;
-  balances: BalanceSchema[];
-} & DetailSchema;
 
 export async function loader(args: LoaderFunctionArgs) {
   const bankId = args.params.bankId;
@@ -17,46 +12,38 @@ export async function loader(args: LoaderFunctionArgs) {
   }
 
   const goCardlessApi = await GoCardlessApi.create(args);
-  const chosenBanks = await goCardlessApi.getChosenBanks();
 
-  // TODO: api call to get bank by id
-  const bank = chosenBanks.find((it) => it.id === bankId);
+  const api = DbApi.create(args);
+  const [bank, accounts] = await Promise.all([
+    api.getBank(bankId),
+    api.getAllAccounts(bankId),
+  ]);
 
-  if (!bank) {
-    throw new Response("Bank not found", { status: 404 });
-  }
-
-  const requisition = await goCardlessApi.getRequisition(bankId);
-
-  if (!requisition) {
-    throw new Response("Requisition not found", { status: 404 });
-  }
-
-  async function getAccountDetails(accountId: string): Promise<ServerAccount> {
-    const [accountDetails, accountBalances] = await Promise.all([
-      goCardlessApi.getAccountDetails(accountId),
-      goCardlessApi.getAccountBalances(accountId),
-    ]);
-
-    return {
-      accountId,
-      ...accountDetails.account,
-      balances: accountBalances.balances ?? [],
-    };
-  }
-
-  const accounts: ServerAccount[] = await Promise.all(
-    requisition.accounts?.map(getAccountDetails) ?? []
+  const accountsWithTransactions = await Promise.all(
+    accounts.map(async (account) => {
+      const transactions = await goCardlessApi.getAccountTransactions(
+        account.accountId
+      );
+      return { ...account, transactions };
+    })
   );
 
-  return json({ bank, requisition, accounts });
+  return json({ bank, accounts: accountsWithTransactions });
 }
 
 export default function Bank() {
   const { bank, accounts } = useLoaderData<typeof loader>();
+  const params = useParams();
+
+  const fetcher = useFetcher();
 
   return (
     <div className="flex flex-col gap-4 items-center">
+      <fetcher.Form method="POST" action="/api/sync-accounts">
+        <button type="submit" disabled={fetcher.state !== "idle"}>
+          Sync accounts
+        </button>
+      </fetcher.Form>
       <h1 className="text-xl">{bank?.name}</h1>
       <ul className="flex flex-col gap-4 max-w-lg min-w-[400px]">
         {accounts.map((account) => {
@@ -80,6 +67,7 @@ export default function Bank() {
                 </h3>
               </div>
               <small>{account.ownerName}</small>
+              {params.accountId === account.accountId && <Outlet />}
             </li>
           );
         })}

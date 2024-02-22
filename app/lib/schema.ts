@@ -1,14 +1,17 @@
 import { InferInsertModel, InferSelectModel } from "drizzle-orm";
 import {
+  blob,
   foreignKey,
   integer,
+  primaryKey,
   sqliteTable,
   text,
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
+import { BalanceSchema } from "generated-sources/gocardless";
 
-export const users = sqliteTable(
-  "users",
+export const user = sqliteTable(
+  "user",
   {
     id: integer("id").primaryKey({
       autoIncrement: true,
@@ -17,30 +20,61 @@ export const users = sqliteTable(
     avatar: text("avatar"),
     name: text("name"),
   },
-  (users) => ({
-    emailIdx: uniqueIndex("emailIdx").on(users.email),
+  (user) => ({
+    emailIdx: uniqueIndex("emailIdx").on(user.email),
   })
 );
 
-export type User = InferSelectModel<typeof users>;
-export type NewUser = InferInsertModel<typeof users>;
+export type User = InferSelectModel<typeof user>;
+export type NewUser = InferInsertModel<typeof user>;
 
-export const usersBanksRelations = sqliteTable(
-  "users_banks_relations",
+export const bank = sqliteTable(
+  "bank",
   {
-    requisitionId: text("requisition_id").primaryKey().notNull(),
+    requisitionId: text("requisition_id"),
     userId: integer("user_id")
-      .references(() => users.id)
+      .references(() => user.id)
       .notNull(),
     bankId: text("bank_id").notNull(),
+    name: text("name").notNull(),
+    logo: text("logo"),
+    bic: text("bic"),
   },
-  (relations) => ({
-    userBankIdx: uniqueIndex("userBankIdx").on(
-      relations.userId,
-      relations.bankId
-    ),
+  (bank) => ({
+    id: primaryKey({
+      columns: [bank.userId, bank.bankId],
+    }),
   })
 );
 
-export type UserBankRelation = InferSelectModel<typeof usersBanksRelations>;
-export type NewUserBankRelation = InferInsertModel<typeof usersBanksRelations>;
+export type Bank = InferSelectModel<typeof bank>;
+export type NewBank = InferInsertModel<typeof bank>;
+
+export const account = sqliteTable(
+  "account",
+  {
+    accountId: text("account_id").notNull(),
+    userId: integer("user_id")
+      .references(() => user.id)
+      .notNull(),
+    bankId: text("bank_id").notNull(),
+    name: text("name").notNull(),
+    ownerName: text("owner_name"),
+    balances: blob("balance", { mode: "json" })
+      .$type<BalanceSchema[]>()
+      .notNull(),
+  },
+  (account) => ({
+    bankReference: foreignKey({
+      columns: [account.userId, account.bankId],
+      foreignColumns: [bank.userId, bank.bankId],
+      name: "bankReference",
+    }),
+    id: primaryKey({
+      columns: [account.userId, account.bankId, account.accountId],
+    }),
+  })
+);
+
+export type Account = InferSelectModel<typeof account>;
+export type NewAccount = InferInsertModel<typeof account>;

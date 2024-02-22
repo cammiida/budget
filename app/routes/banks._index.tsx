@@ -2,24 +2,12 @@ import {
   ActionFunctionArgs,
   LoaderFunctionArgs,
   json,
-  redirect,
 } from "@remix-run/cloudflare";
 import { Form, useFetcher, useLoaderData } from "@remix-run/react";
-import { Integration } from "generated-sources/gocardless";
-import { z } from "zod";
 import { requireLogin } from "~/lib/auth.server";
 import { DbApi } from "~/lib/dbApi";
 import { GoCardlessApi } from "~/lib/gocardless-api.server";
-
-export const bankSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  bic: z.string(),
-  transaction_total_days: z.coerce.number(),
-  countries: z.array(z.unknown()),
-  logo: z.string(),
-});
-export type Bank = z.infer<typeof bankSchema>;
+import { Bank } from "~/lib/schema";
 
 export async function loader(args: LoaderFunctionArgs) {
   const session = await requireLogin(args);
@@ -29,7 +17,7 @@ export async function loader(args: LoaderFunctionArgs) {
 
   const goCardlessApi = await GoCardlessApi.create(args);
   const allBanks = await goCardlessApi.getAllBanks();
-  const chosenBanks = await goCardlessApi.getChosenBanks();
+  const chosenBanks = await api.getBanks();
 
   return json(
     { user, allBanks, chosenBanks },
@@ -41,26 +29,40 @@ export async function action(args: ActionFunctionArgs) {
   const goCardlessApi = await GoCardlessApi.create(args);
 
   const formData = await args.request.formData();
-  const chosenBank = formData.get("bank") as string;
+  const bankId = formData.get("bankId") as string;
 
-  const requisition = await goCardlessApi.createRequisition(chosenBank);
-
-  if (!requisition.id) {
-    throw new Response("Failed to create requisition with id", { status: 500 });
+  const bank = await goCardlessApi.getBank(bankId);
+  if (bank.requisitionId) {
+    try {
+      await goCardlessApi.getRequisition(bank.requisitionId);
+      return json({ bank });
+    } catch (error) {
+      console.error(
+        "Failed to get requisition. Requisition might be expired.",
+        error
+      );
+    }
   }
-  // TODO: needed? Can some integrations not need authorization through a link?
-  if (!requisition.link) {
-    throw new Response("Failed to create requisition with link", {
-      status: 500,
+
+  try {
+    const requisition = await goCardlessApi.createRequisition(bankId);
+    // TODO: needed? Can some integrations not need authorization through a link?
+    if (!requisition.link) {
+      throw new Response("Failed to create requisition with link", {
+        status: 500,
+      });
+    }
+
+    const createdBank = await DbApi.create(args).addBank({
+      ...bank,
+      requisitionId: requisition.id,
     });
+
+    return json({ bank: createdBank });
+  } catch (error) {
+    console.error("Failed to create requisition", error);
+    throw new Response("Failed to create requisition", { status: 500 });
   }
-
-  await DbApi.create(args).addUserBankRelation({
-    bankId: chosenBank as string,
-    requisitionId: requisition.id,
-  });
-
-  return redirect(requisition.link);
 }
 
 function Banks() {
@@ -71,7 +73,7 @@ function Banks() {
       <div className="flex flex-col gap-4">
         <h1 className="text-lg">Your banks</h1>
         {chosenBanks.map((it) => (
-          <Bank bank={it} key={it.id} />
+          <BankComponent bank={it} key={it.bankId} />
         ))}
       </div>
       <div>
@@ -93,16 +95,20 @@ function Banks() {
 
 export default Banks;
 
-function Bank({ bank }: { bank: Integration }) {
+function BankComponent({ bank }: { bank: Bank }) {
   const fetcher = useFetcher();
   const isDeleting = fetcher.state !== "idle";
 
   return (
-    <div key={bank.id} className="flex gap-2">
-      <img className="w-8 h-8 rounded-full" src={bank.logo} alt={bank.name} />
+    <div key={bank.bankId} className="flex gap-2">
+      <img
+        className="w-8 h-8 rounded-full"
+        src={bank.logo ?? undefined}
+        alt={bank.name}
+      />
       <span>{bank.name}</span>
       <fetcher.Form method="delete" action="/api/remove-bank">
-        <input type="hidden" name="bank" value={bank.id} />
+        <input type="hidden" name="bankId" value={bank.bankId} />
         <button
           className="disabled:opacity-50 bg-red-500 text-white px-2 py-1 rounded-md"
           type="submit"

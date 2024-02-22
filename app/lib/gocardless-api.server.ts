@@ -2,18 +2,24 @@ import {
   AppLoadContext,
   Session,
   createCookieSessionStorage,
-  redirect,
 } from "@remix-run/cloudflare";
 import {
   AccountsService,
+  BalanceSchema,
+  DetailSchema,
   InstitutionsService,
   OpenAPI,
   RequisitionsService,
 } from "generated-sources/gocardless";
 import { z } from "zod";
-import { getUserSession } from "./auth.server";
 import { DbApi } from "./dbApi";
+import { Account, Bank, User } from "./schema";
 import { ServerArgs } from "./types";
+
+export type ServerAccount = {
+  accountId: string;
+  balances: BalanceSchema[];
+} & DetailSchema;
 
 export const accessTokenSchema = z.object({
   access: z.string(),
@@ -49,24 +55,34 @@ export class GoCardlessApi {
   private request: Request;
   private context: AppLoadContext;
   private session: GoCardlessSession;
+  private user: User;
 
   private constructor({
     request,
     context,
     session,
+    user,
   }: ServerArgs & {
     session: GoCardlessSession;
+    user: User;
   }) {
     this.request = request;
     this.context = context;
     this.session = session;
+    this.user = user;
   }
 
   static async create(args: ServerArgs) {
     const session = await goCardlessStorage.getSession(
       args.request.headers.get("Cookie")
     );
-    return new GoCardlessApi({ ...args, session });
+    OpenAPI.TOKEN = (
+      await goCardlessStorage.getSession(args.request.headers.get("Cookie"))
+    ).data.goCardless?.access;
+
+    const dbApi = DbApi.create(args);
+    const user = await dbApi.requireUser();
+    return new GoCardlessApi({ ...args, session, user });
   }
 
   async authorize() {
@@ -181,8 +197,19 @@ export class GoCardlessApi {
     return true;
   }
 
+  async getBank(bankId: string): Promise<Bank> {
+    const result = await InstitutionsService.retrieveInstitution(bankId);
+    return {
+      bankId,
+      userId: this.user.id,
+      requisitionId: null,
+      name: result.name,
+      bic: result.bic ?? null,
+      logo: result.logo,
+    };
+  }
+
   async getAllBanks() {
-    OpenAPI.TOKEN = (await this.getSession()).data.goCardless?.access;
     return InstitutionsService.retrieveAllSupportedInstitutionsInAGivenCountry(
       undefined,
       undefined,
@@ -193,31 +220,9 @@ export class GoCardlessApi {
     );
   }
 
-  async getChosenBanks() {
-    const userApi = DbApi.create({
-      request: this.request,
-      context: this.context,
-    });
-
-    const [allBanks, chosenBankIds] = await Promise.all([
-      this.getAllBanks(),
-      userApi.getAllBanksForUser(),
-    ]);
-
-    return allBanks.filter((bank) => chosenBankIds.includes(bank.id));
-  }
-
-  async getRequisition(bankId: string) {
-    const api = DbApi.create({ context: this.context, request: this.request });
-
-    const bankRelation = await api.getBankRelation(bankId);
-    if (!bankRelation) {
-      throw new Response("Bank relation not found", { status: 404 });
-    }
-
-    OpenAPI.TOKEN = (await this.getSession()).data.goCardless?.access;
+  async getRequisition(requisitionId: string) {
     try {
-      return RequisitionsService.requisitionById(bankRelation.requisitionId);
+      return RequisitionsService.requisitionById(requisitionId);
     } catch (error) {
       if (error instanceof Error) {
         console.error(error.message);
@@ -227,22 +232,52 @@ export class GoCardlessApi {
     }
   }
 
-  async createRequisition(institutionId: string) {
-    OpenAPI.TOKEN = (await this.getSession()).data.goCardless?.access;
-
+  async createRequisition(bankId: string) {
     return RequisitionsService.createRequisition({
-      institution_id: institutionId,
+      institution_id: bankId,
       redirect: "http://172.24.134.19:8788/api/authenticate-bank",
     });
   }
 
+  async getAccountsForBank(bankId: string) {
+    const requisition = await this.getRequisition(bankId);
+
+    if (!requisition.accounts) {
+      return [];
+    }
+
+    return Promise.all(
+      requisition.accounts.map((accountId) =>
+        this.getAccountDetails(bankId, accountId)
+      )
+    );
+  }
+
   async getAccountBalances(accountId: string) {
-    OpenAPI.TOKEN = (await this.getSession()).data.goCardless?.access;
     return AccountsService.retrieveAccountBalances(accountId);
   }
 
-  async getAccountDetails(accountId: string) {
+  async getAccountDetails(bankId: string, accountId: string): Promise<Account> {
+    const [accountDetails, accountBalances] = await Promise.all([
+      AccountsService.retrieveAccountDetails(accountId),
+      AccountsService.retrieveAccountBalances(accountId),
+    ]);
+
+    return {
+      accountId,
+      userId: this.user.id,
+      bankId,
+      name:
+        accountDetails.account.name ??
+        `${this.user.id} - ${bankId} - ${accountId}`,
+      ...accountDetails.account,
+      ownerName: accountDetails.account.ownerName ?? "",
+      balances: accountBalances.balances ?? [],
+    };
+  }
+
+  async getAccountTransactions(accountId: string) {
     OpenAPI.TOKEN = (await this.getSession()).data.goCardless?.access;
-    return AccountsService.retrieveAccountDetails(accountId);
+    return AccountsService.retrieveAccountTransactions(accountId);
   }
 }
