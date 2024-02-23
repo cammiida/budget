@@ -2,24 +2,17 @@ import {
   AppLoadContext,
   Session,
   createCookieSessionStorage,
+  redirect,
 } from "@remix-run/cloudflare";
 import {
   AccountsService,
-  BalanceSchema,
-  DetailSchema,
   InstitutionsService,
   OpenAPI,
   RequisitionsService,
 } from "generated-sources/gocardless";
 import { z } from "zod";
-import { DbApi } from "./dbApi";
-import { Account, Bank, User } from "./schema";
+import { Account, Bank } from "./schema";
 import { ServerArgs } from "./types";
-
-export type ServerAccount = {
-  accountId: string;
-  balances: BalanceSchema[];
-} & DetailSchema;
 
 export const accessTokenSchema = z.object({
   access: z.string(),
@@ -55,34 +48,26 @@ export class GoCardlessApi {
   private request: Request;
   private context: AppLoadContext;
   private session: GoCardlessSession;
-  private user: User;
 
   private constructor({
     request,
     context,
     session,
-    user,
   }: ServerArgs & {
     session: GoCardlessSession;
-    user: User;
   }) {
     this.request = request;
     this.context = context;
     this.session = session;
-    this.user = user;
   }
 
   static async create(args: ServerArgs) {
     const session = await goCardlessStorage.getSession(
       args.request.headers.get("Cookie")
-    );
-    OpenAPI.TOKEN = (
-      await goCardlessStorage.getSession(args.request.headers.get("Cookie"))
-    ).data.goCardless?.access;
+    ); // TODO: add this to context
+    OpenAPI.TOKEN = session.data.goCardless?.access;
 
-    const dbApi = DbApi.create(args);
-    const user = await dbApi.requireUser();
-    return new GoCardlessApi({ ...args, session, user });
+    return new GoCardlessApi({ ...args, session });
   }
 
   async authorize() {
@@ -197,11 +182,20 @@ export class GoCardlessApi {
     return true;
   }
 
-  async getBank(bankId: string): Promise<Bank> {
+  getCurrentUser() {
+    const user = this.context.session;
+    if (!user) {
+      throw redirect("/auth/login");
+    }
+    return user;
+  }
+
+  async getBank({ bankId }: { bankId: string }): Promise<Bank> {
     const result = await InstitutionsService.retrieveInstitution(bankId);
+
     return {
       bankId,
-      userId: this.user.id,
+      userId: this.getCurrentUser().id,
       requisitionId: null,
       name: result.name,
       bic: result.bic ?? null,
@@ -220,7 +214,16 @@ export class GoCardlessApi {
     );
   }
 
-  async getRequisition(requisitionId: string) {
+  async createRequisition(bankId: string) {
+    const requisition = await RequisitionsService.createRequisition({
+      institution_id: bankId,
+      redirect: "http://172.24.134.19:8788/api/authenticate-bank",
+    });
+
+    return requisition;
+  }
+
+  async getRequisition({ requisitionId }: { requisitionId: string }) {
     try {
       return RequisitionsService.requisitionById(requisitionId);
     } catch (error) {
@@ -232,24 +235,20 @@ export class GoCardlessApi {
     }
   }
 
-  async createRequisition(bankId: string) {
-    return RequisitionsService.createRequisition({
-      institution_id: bankId,
-      redirect: "http://172.24.134.19:8788/api/authenticate-bank",
-    });
-  }
-
-  async getAccountsForBank(bankId: string) {
-    const requisition = await this.getRequisition(bankId);
-
-    if (!requisition.accounts) {
-      return [];
+  async getAccountsForBank({ bankId }: { bankId: string }): Promise<Account[]> {
+    const bank = await this.getBank({ bankId });
+    if (!bank.requisitionId) {
+      throw new Response("Requisition not found", { status: 404 });
     }
 
+    const requisition = await this.getRequisition({
+      requisitionId: bank.requisitionId,
+    });
+
     return Promise.all(
-      requisition.accounts.map((accountId) =>
-        this.getAccountDetails(bankId, accountId)
-      )
+      requisition.accounts?.map((accountId) =>
+        this.getAccountDetails({ bankId, accountId })
+      ) ?? []
     );
   }
 
@@ -257,7 +256,15 @@ export class GoCardlessApi {
     return AccountsService.retrieveAccountBalances(accountId);
   }
 
-  async getAccountDetails(bankId: string, accountId: string): Promise<Account> {
+  async getAccountDetails({
+    bankId,
+    accountId,
+  }: {
+    bankId: string;
+    accountId: string;
+  }): Promise<Account> {
+    const userId = this.getCurrentUser().id;
+
     const [accountDetails, accountBalances] = await Promise.all([
       AccountsService.retrieveAccountDetails(accountId),
       AccountsService.retrieveAccountBalances(accountId),
@@ -265,11 +272,10 @@ export class GoCardlessApi {
 
     return {
       accountId,
-      userId: this.user.id,
+      userId,
       bankId,
       name:
-        accountDetails.account.name ??
-        `${this.user.id} - ${bankId} - ${accountId}`,
+        accountDetails.account.name ?? `${userId} - ${bankId} - ${accountId}`,
       ...accountDetails.account,
       ownerName: accountDetails.account.ownerName ?? "",
       balances: accountBalances.balances ?? [],

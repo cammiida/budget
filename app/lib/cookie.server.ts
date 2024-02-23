@@ -1,33 +1,37 @@
 import {
   AppLoadContext,
+  SessionData,
   createCookieSessionStorage,
 } from "@remix-run/cloudflare";
 import { GoogleProfile } from "./google-strategy.server";
+import { Env } from "env.server";
 
-export type Profile = Pick<GoogleProfile, "id" | "displayName" | "name"> & {
+export type Session = Pick<GoogleProfile, "displayName" | "name" | "_json"> & {
+  id: number;
   email: string;
   avatar?: string;
 };
 
-type SessionFlashData = {
+export type SessionFlashData = {
   error: string;
 };
 
-export const createSessionStorage = (context: AppLoadContext) =>
-  createCookieSessionStorage({
+export const createSessionStorage = (env: Env) => {
+  return createCookieSessionStorage({
     cookie: {
       name: "__session",
       httpOnly: true,
       maxAge: 60 * 60 * 24, // 24 hours
       path: "/",
       sameSite: "lax",
-      secrets: [context.env.SESSION_SECRET],
-      secure: context.env.NODE_ENV === "production" ? true : false,
+      secrets: [env.SESSION_SECRET],
+      secure: env.NODE_ENV === "production" ? true : false,
     },
   });
+};
 
 export const flashSession = createCookieSessionStorage<
-  Profile,
+  SessionData,
   SessionFlashData
 >({
   cookie: {
@@ -35,7 +39,7 @@ export const flashSession = createCookieSessionStorage<
     sameSite: "lax", // this helps with CSRF
     path: "/", // remember to add this so the cookie will work in all routes
     httpOnly: true, // for security reasons, make this cookie http only
-    secrets: ["secretttokdoakdw"], // replace this with an actual secret
+    secrets: ["secretttokdoakdw"], // TODO: replace this with an actual secret
     secure: true, // enable this in prod only
     maxAge: 60 * 60 * 24 * 30,
   },

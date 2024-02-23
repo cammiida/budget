@@ -2,6 +2,8 @@ import { AppLoadContext, json } from "@remix-run/cloudflare";
 import { createPagesFunctionHandler } from "@remix-run/cloudflare-pages";
 import * as build from "@remix-run/dev/server-build";
 import { envSchema } from "env.server";
+import { Session, createSessionStorage } from "~/lib/cookie.server";
+import { GoogleStrategy } from "~/lib/google-strategy.server";
 
 type PagesContext = { DB: D1Database };
 
@@ -35,6 +37,14 @@ export const onRequest: ReturnType<
     );
   }
 
+  const cookieHeader = context.request.headers.get("Cookie");
+  const sessionCookie = await createSessionStorage(env.data).getSession(
+    cookieHeader
+  );
+  const session: Session | null = sessionCookie.get(
+    GoogleStrategy.authenticatorOptions.sessionKey
+  );
+
   const handler = createPagesFunctionHandler({
     build,
     mode: process.env.NODE_ENV,
@@ -42,8 +52,8 @@ export const onRequest: ReturnType<
       return {
         ...context,
         env: env.data,
-        waitUntil: context.waitUntil,
         db,
+        session,
       };
     },
   });

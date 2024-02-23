@@ -1,11 +1,11 @@
 import { eq } from "drizzle-orm";
-import type { StrategyVerifyCallback } from "remix-auth";
+import type { AuthenticatorOptions, StrategyVerifyCallback } from "remix-auth";
 import type {
   OAuth2Profile,
   OAuth2StrategyVerifyParams,
 } from "remix-auth-oauth2";
 import { OAuth2Strategy } from "remix-auth-oauth2";
-import { Profile } from "./cookie.server";
+import { Session } from "./cookie.server";
 import { getDbFromContext } from "./db.service.server";
 import { user } from "./schema";
 import { ServerArgs } from "./types";
@@ -20,7 +20,7 @@ export function createGoogleStrategy(args: ServerArgs) {
 
   const db = getDbFromContext(args.context);
 
-  return new GoogleStrategy<Profile>(
+  return new GoogleStrategy<Session>(
     {
       clientID: args.context.env.GOOGLE_CLIENT_ID,
       clientSecret: args.context.env.GOOGLE_CLIENT_SECRET,
@@ -38,7 +38,7 @@ export function createGoogleStrategy(args: ServerArgs) {
 
       if (existingUser) {
         return {
-          id: profile.id,
+          id: existingUser.id,
           displayName: profile.displayName,
           name: profile.name,
           email,
@@ -114,6 +114,13 @@ export class GoogleStrategy<User> extends OAuth2Strategy<
   GoogleProfile,
   GoogleExtraParams
 > {
+  static authenticatorOptions: Required<AuthenticatorOptions> = {
+    sessionKey: "google:session",
+    sessionErrorKey: "google:error",
+    sessionStrategyKey: "strategy",
+    throwOnError: true,
+  };
+
   public name = GoogleStrategyDefaultName;
 
   private readonly accessType: string;

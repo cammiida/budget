@@ -1,11 +1,12 @@
 import "@remix-run/cloudflare";
-import type { z } from "zod";
-import { envSchema } from "~env.server";
+import { Env } from "env.server";
+import { Session } from "~/lib/cookie.server";
 
 declare module "@remix-run/cloudflare" {
   interface AppLoadContext {
     waitUntil: EventContext<unknown, unknown, unknown>["waitUntil"];
-    env: z.infer<typeof envSchema>;
+    env: Env;
     db: D1Database;
+    session: Session | null;
   }
 }

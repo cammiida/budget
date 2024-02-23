@@ -17,6 +17,14 @@ export class DbApi {
     this.request = request;
   }
 
+  getCurrentUser() {
+    const user = this.context.session;
+    if (!user) {
+      throw redirect("/auth/login");
+    }
+    return user;
+  }
+
   static create(args: ServerArgs) {
     return new DbApi(args);
   }
@@ -34,7 +42,7 @@ export class DbApi {
   }
 
   async getBanks(): Promise<Bank[]> {
-    const user = await this.requireUser();
+    const user = this.getCurrentUser();
 
     return await this.db
       .select()
@@ -44,7 +52,7 @@ export class DbApi {
   }
 
   async addBank(newBank: Omit<NewBank, "userId">) {
-    const user = await this.requireUser();
+    const user = this.getCurrentUser();
 
     return this.db
       .insert(bank)
@@ -55,7 +63,7 @@ export class DbApi {
   }
 
   async removeBank(bankId: string) {
-    const user = await this.requireUser();
+    const user = this.getCurrentUser();
 
     return this.db
       .delete(bank)
@@ -65,7 +73,7 @@ export class DbApi {
   }
 
   async getBank(bankId: string) {
-    const user = await this.requireUser();
+    const user = this.getCurrentUser();
 
     return this.db
       .select()
@@ -75,7 +83,7 @@ export class DbApi {
   }
 
   async getAllAccounts(bankId: string) {
-    const user = await this.requireUser();
+    const user = this.getCurrentUser();
 
     return this.db
       .select()

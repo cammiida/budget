@@ -1,7 +1,11 @@
-import { LoaderFunctionArgs, SerializeFrom, json } from "@remix-run/cloudflare";
+import {
+  LoaderFunctionArgs,
+  SerializeFrom,
+  json,
+  redirect,
+} from "@remix-run/cloudflare";
 import { useLoaderData } from "@remix-run/react";
 import { CurrencyExchangeSchema } from "generated-sources/gocardless";
-import { DbApi } from "~/lib/dbApi";
 
 type Account = {
   id: string;
@@ -199,7 +203,10 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
     };
   });
 
-  await DbApi.create({ request, context }).requireUser();
+  const user = context.session;
+  if (!user) {
+    throw redirect("/auth/login?returnTo=/budget");
+  }
 
   return json({
     budget: budget,

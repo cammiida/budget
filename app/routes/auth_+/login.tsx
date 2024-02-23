@@ -27,11 +27,13 @@ export async function action(args: ActionFunctionArgs) {
   }
 }
 
-export async function loader(args: LoaderFunctionArgs) {
-  const user = await getUserSession(args);
+export async function loader({ context, request }: LoaderFunctionArgs) {
+  const user = context.session;
 
   if (user) {
-    throw redirect("/");
+    const redirectTo =
+      new URL(request.url).searchParams.get("redirectTo") ?? "/";
+    throw redirect(redirectTo); // TODO: finish this
   }
 
   return new Response(null);
