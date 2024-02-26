@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "sqlite",
-  "id": "7a2cdc89-37b7-42bc-a556-7349b7a610ca",
+  "id": "f821b159-2602-4da9-9c63-d6dae6a7f5a1",
   "prevId": "fb2b26b6-52ba-4603-ac36-369a9c357d46",
   "tables": {
     "account": {
@@ -42,9 +42,9 @@
           "notNull": false,
           "autoincrement": false
         },
-        "balance": {
-          "name": "balance",
-          "type": "blob",
+        "balances": {
+          "name": "balances",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -52,19 +52,6 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "account_user_id_user_id_fk": {
-          "name": "account_user_id_user_id_fk",
-          "tableFrom": "account",
-          "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
         "bankReference": {
           "name": "bankReference",
           "tableFrom": "account",

@@ -54,13 +54,11 @@ export const account = sqliteTable(
   "account",
   {
     accountId: text("account_id").notNull(),
-    userId: integer("user_id")
-      .references(() => user.id)
-      .notNull(),
+    userId: integer("user_id").notNull(),
     bankId: text("bank_id").notNull(),
     name: text("name").notNull(),
     ownerName: text("owner_name"),
-    balances: blob("balance", { mode: "json" })
+    balances: text("balances", { mode: "json" })
       .$type<BalanceSchema[]>()
       .notNull(),
   },
