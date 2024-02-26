@@ -1,7 +1,6 @@
 import { AppLoadContext, redirect } from "@remix-run/cloudflare";
 import { and, eq, sql } from "drizzle-orm";
 import { DrizzleD1Database } from "drizzle-orm/d1";
-import { requireLogin } from "./auth.server";
 import { getDbFromContext } from "./db.service.server";
 import { Bank, NewBank, User, account, bank, user } from "./schema";
 import { ServerArgs } from "./types";
@@ -18,7 +17,7 @@ export class DbApi {
   }
 
   getCurrentUser() {
-    const user = this.context.session;
+    const user = this.context.user;
     if (!user) {
       throw redirect("/auth/login");
     }
@@ -90,19 +89,5 @@ export class DbApi {
       .from(account)
       .where(and(eq(account.userId, user.id), eq(account.bankId, bankId)))
       .all();
-  }
-
-  async requireUser() {
-    const userSession = await requireLogin({
-      request: this.request,
-      context: this.context,
-    });
-    const user = await this.getUserByEmail(userSession.email);
-
-    if (!user) {
-      throw redirect("/auth/login");
-    }
-
-    return user;
   }
 }

@@ -11,7 +11,7 @@ export async function loader(args: LoaderFunctionArgs) {
     return json({ bank: null, accounts: [] });
   }
 
-  const goCardlessApi = await GoCardlessApi.create(args);
+  const goCardlessApi = GoCardlessApi.create(args);
 
   const api = DbApi.create(args);
   const [bank, accounts] = await Promise.all([

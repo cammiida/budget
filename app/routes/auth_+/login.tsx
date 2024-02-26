@@ -5,7 +5,7 @@ import {
 } from "@remix-run/cloudflare";
 import { Form } from "@remix-run/react";
 import { Button } from "~/components/ui/button";
-import { authenticate, getUserSession } from "~/lib/auth.server";
+import { authenticate } from "~/lib/auth.server";
 import { flashSession } from "~/lib/cookie.server";
 
 export async function action(args: ActionFunctionArgs) {
@@ -28,9 +28,7 @@ export async function action(args: ActionFunctionArgs) {
 }
 
 export async function loader({ context, request }: LoaderFunctionArgs) {
-  const user = context.session;
-
-  if (user) {
+  if (context.user) {
     const redirectTo =
       new URL(request.url).searchParams.get("redirectTo") ?? "/";
     throw redirect(redirectTo); // TODO: finish this

@@ -203,8 +203,7 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
     };
   });
 
-  const user = context.session;
-  if (!user) {
+  if (!context.user) {
     throw redirect("/auth/login?returnTo=/budget");
   }
 
@@ -219,7 +218,6 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
 export default function Budget() {
   const { budget, categories, uncategorizedTransactions } =
     useLoaderData<typeof loader>();
-  console.log({ categories });
 
   return (
     <div className="flex flex-col gap-4">

@@ -5,7 +5,7 @@ import type {
   OAuth2StrategyVerifyParams,
 } from "remix-auth-oauth2";
 import { OAuth2Strategy } from "remix-auth-oauth2";
-import { Session } from "./cookie.server";
+import { GoogleSession } from "./cookie.server";
 import { getDbFromContext } from "./db.service.server";
 import { user } from "./schema";
 import { ServerArgs } from "./types";
@@ -20,7 +20,7 @@ export function createGoogleStrategy(args: ServerArgs) {
 
   const db = getDbFromContext(args.context);
 
-  return new GoogleStrategy<Session>(
+  return new GoogleStrategy<GoogleSession>(
     {
       clientID: args.context.env.GOOGLE_CLIENT_ID,
       clientSecret: args.context.env.GOOGLE_CLIENT_SECRET,

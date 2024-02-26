@@ -15,18 +15,15 @@ export async function loader(args: LoaderFunctionArgs) {
   const api = DbApi.create(args);
   const user = await api.getUserByEmail(session.email);
 
-  const goCardlessApi = await GoCardlessApi.create(args);
+  const goCardlessApi = GoCardlessApi.create(args);
   const allBanks = await goCardlessApi.getAllBanks();
   const chosenBanks = await api.getBanks();
 
-  return json(
-    { user, allBanks, chosenBanks },
-    { headers: { "Set-Cookie": await goCardlessApi.commitSession() } }
-  );
+  return json({ user, allBanks, chosenBanks });
 }
 
 export async function action(args: ActionFunctionArgs) {
-  const goCardlessApi = await GoCardlessApi.create(args);
+  const goCardlessApi = GoCardlessApi.create(args);
 
   const formData = await args.request.formData();
   const bankId = formData.get("bankId") as string;

@@ -1,5 +1,5 @@
 import { Authenticator } from "remix-auth";
-import { Session, createSessionStorage } from "./cookie.server";
+import { GoogleSession, createSessionStorage } from "./cookie.server";
 
 import {
   GoogleStrategy,
@@ -9,7 +9,7 @@ import {
 import { ServerArgs } from "./types";
 
 function createAuthenticator(args: ServerArgs) {
-  const authenticator = new Authenticator<Session>(
+  const authenticator = new Authenticator<GoogleSession>(
     createSessionStorage(args.context.env),
     GoogleStrategy.authenticatorOptions
   );

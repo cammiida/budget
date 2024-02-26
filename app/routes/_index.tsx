@@ -10,7 +10,7 @@ const LINKS = [
 ];
 
 export async function loader(args: LoaderFunctionArgs) {
-  const user = args.context.session;
+  const user = args.context.user;
 
   if (!user) {
     throw redirect("/auth/login");

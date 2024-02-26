@@ -36,12 +36,9 @@ export async function loader(args: LoaderFunctionArgs) {
   const fSession = await flashSession.getSession(cookieHeader);
   const toast = fSession.get("error") || null;
   const user = await getUserSession(args);
-  const goCardlessApi = await GoCardlessApi.create(args);
-  await goCardlessApi.authorize();
 
   const headers = new Headers();
   headers.append("Set-Cookie", await flashSession.commitSession(fSession));
-  headers.append("Set-Cookie", await goCardlessApi.commitSession());
 
   return json(
     {
