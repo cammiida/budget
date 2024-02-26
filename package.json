@@ -9,10 +9,13 @@
     "dev": "npm-run-all build --parallel \"dev:*\"",
     "start": "cross-env NODE_ENV=production npm run wrangler",
     "typecheck": "tsc",
-    "wrangler": "wrangler pages dev ./public --local --persist",
-    "generate": "drizzle-kit generate:sqlite --schema=./app/lib/schema.ts",
+    "wrangler": "wrangler pages dev ./public --local",
     "up": "drizzle-kit up:sqlite",
-    "generate-clients": "openapi --input https://ob.gocardless.com/api/v2/swagger.json --output ./generated-sources/gocardless"
+    "generate-clients": "openapi --input https://ob.gocardless.com/api/v2/swagger.json --output ./generated-sources/gocardless",
+    "generate-migrations": "drizzle-kit generate:sqlite --schema=./app/lib/schema.ts",
+    "list-migrations": "wrangler d1 migrations list budget --local",
+    "apply-migrations": "wrangler d1 migrations apply budget --local",
+    "drop-migration": "drizzle-kit drop"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.0.4",
