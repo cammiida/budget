@@ -8,30 +8,32 @@ import { requireLogin } from "~/lib/auth.server";
 import { DbApi } from "~/lib/dbApi";
 import { GoCardlessApi } from "~/lib/gocardless-api.server";
 import { Bank } from "~/lib/schema";
+import { getOrAddBank } from "~/lib/services/bank.server";
+import { getOrCreateRequisition } from "~/lib/services/requisition.server";
 
-export async function loader(args: LoaderFunctionArgs) {
-  const session = await requireLogin(args);
+export async function loader({ context, request }: LoaderFunctionArgs) {
+  const session = await requireLogin({ context, request });
 
-  const api = DbApi.create(args);
+  const api = DbApi.create({ context });
   const user = await api.getUserByEmail(session.email);
 
-  const goCardlessApi = GoCardlessApi.create(args);
+  const goCardlessApi = GoCardlessApi.create({ context });
   const allBanks = await goCardlessApi.getAllBanks();
   const chosenBanks = await api.getBanks();
 
   return json({ user, allBanks, chosenBanks });
 }
 
-export async function action(args: ActionFunctionArgs) {
-  const goCardlessApi = GoCardlessApi.create(args);
+export async function action({ context, request }: ActionFunctionArgs) {
+  const goCardlessApi = GoCardlessApi.create({ context });
 
-  const formData = await args.request.formData();
+  const formData = await request.formData();
   const bankId = formData.get("bankId") as string;
 
-  const bank = await goCardlessApi.getBank(bankId);
+  const bank = await getOrAddBank({ bankId, context });
   if (bank.requisitionId) {
     try {
-      await goCardlessApi.getRequisition(bank.requisitionId);
+      await getOrCreateRequisition({ bankId: bank.bankId, context });
       return json({ bank });
     } catch (error) {
       console.error(
@@ -50,12 +52,7 @@ export async function action(args: ActionFunctionArgs) {
       });
     }
 
-    const createdBank = await DbApi.create(args).addBank({
-      ...bank,
-      requisitionId: requisition.id,
-    });
-
-    return json({ bank: createdBank });
+    return json({ bank });
   } catch (error) {
     console.error("Failed to create requisition", error);
     throw new Response("Failed to create requisition", { status: 500 });

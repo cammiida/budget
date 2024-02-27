@@ -1,31 +1,39 @@
-import { AppLoadContext, redirect } from "@remix-run/cloudflare";
+import { AppLoadContext } from "@remix-run/cloudflare";
 import { and, eq, sql } from "drizzle-orm";
 import { DrizzleD1Database } from "drizzle-orm/d1";
 import { getDbFromContext } from "./db.service.server";
-import { Bank, NewBank, User, account, bank, user } from "./schema";
+import {
+  Account,
+  Bank,
+  NewAccount,
+  NewBank,
+  User,
+  account,
+  bank,
+  user,
+} from "./schema";
 import { ServerArgs } from "./types";
 
 export class DbApi {
   db: DrizzleD1Database;
   context: AppLoadContext;
-  request: Request;
 
-  private constructor({ context, request }: ServerArgs) {
+  private constructor({ context }: { context: AppLoadContext }) {
     this.db = getDbFromContext(context);
     this.context = context;
-    this.request = request;
+  }
+
+  static create({ context }: { context: AppLoadContext }) {
+    return new DbApi({ context });
   }
 
   getCurrentUser() {
     const user = this.context.user;
     if (!user) {
-      throw redirect("/auth/login");
+      throw new Response("User not found", { status: 401 });
     }
-    return user;
-  }
 
-  static create(args: ServerArgs) {
-    return new DbApi(args);
+    return user;
   }
 
   async getAllUsers(): Promise<User[]> {
@@ -81,6 +89,16 @@ export class DbApi {
       .get();
   }
 
+  async updateBank(bankId: string, updates: Partial<Bank>) {
+    const user = this.getCurrentUser();
+
+    return this.db
+      .update(bank)
+      .set(updates)
+      .where(and(eq(bank.userId, user.id), eq(bank.bankId, bankId)))
+      .returning();
+  }
+
   async getAllAccounts(bankId: string) {
     const user = this.getCurrentUser();
 
@@ -89,5 +107,25 @@ export class DbApi {
       .from(account)
       .where(and(eq(account.userId, user.id), eq(account.bankId, bankId)))
       .all();
+  }
+
+  async saveAccounts(accounts: NewAccount[]): Promise<Account[]> {
+    if (!accounts.length) {
+      return [];
+    }
+
+    try {
+      return await this.db
+        .insert(account)
+        .values(accounts)
+        .onConflictDoUpdate({
+          target: [account.userId, account.bankId, account.accountId],
+          set: { balances: sql`excluded.balances` },
+        })
+        .returning();
+    } catch (error) {
+      console.error(error);
+      throw new Response("Unable to save accounts", { status: 500 });
+    }
   }
 }

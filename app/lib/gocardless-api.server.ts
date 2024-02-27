@@ -1,6 +1,7 @@
 import { AppLoadContext, redirect } from "@remix-run/cloudflare";
 import {
   AccountsService,
+  ApiError,
   InstitutionsService,
   OpenAPI,
   RequisitionsService,
@@ -62,62 +63,33 @@ export class GoCardlessApi {
   }
 
   async getRequisition({ requisitionId }: { requisitionId: string }) {
+    if (!requisitionId) {
+      return null;
+    }
+
     try {
-      return RequisitionsService.requisitionById(requisitionId);
+      return await RequisitionsService.requisitionById(requisitionId);
     } catch (error) {
-      if (error instanceof Error) {
-        console.error(error.message);
+      if (!(error instanceof ApiError)) {
+        console.error(error);
+        throw new Response("Could not get requisition", { status: 500 });
       }
-      // TODO: improve error handling
-      throw new Response("An error happened", { status: 500 });
+
+      if (error.status === 404) {
+        return null;
+      }
+      throw new Response("Could not get requisition", {
+        ...error,
+      });
     }
-  }
-
-  async getAccountsForBank({ bankId }: { bankId: string }): Promise<Account[]> {
-    const bank = await this.getBank({ bankId });
-    if (!bank.requisitionId) {
-      throw new Response("Requisition not found", { status: 404 });
-    }
-
-    const requisition = await this.getRequisition({
-      requisitionId: bank.requisitionId,
-    });
-
-    return Promise.all(
-      requisition.accounts?.map((accountId) =>
-        this.getAccountDetails({ bankId, accountId })
-      ) ?? []
-    );
   }
 
   async getAccountBalances(accountId: string) {
     return AccountsService.retrieveAccountBalances(accountId);
   }
 
-  async getAccountDetails({
-    bankId,
-    accountId,
-  }: {
-    bankId: string;
-    accountId: string;
-  }): Promise<Account> {
-    const userId = this.getCurrentUser().id;
-
-    const [accountDetails, accountBalances] = await Promise.all([
-      AccountsService.retrieveAccountDetails(accountId),
-      AccountsService.retrieveAccountBalances(accountId),
-    ]);
-
-    return {
-      accountId,
-      userId,
-      bankId,
-      name:
-        accountDetails.account.name ?? `${userId} - ${bankId} - ${accountId}`,
-      ...accountDetails.account,
-      ownerName: accountDetails.account.ownerName ?? "",
-      balances: accountBalances.balances ?? [],
-    };
+  async getAccountDetails(accountId: string) {
+    return AccountsService.retrieveAccountDetails(accountId);
   }
 
   async getAccountTransactions(accountId: string) {

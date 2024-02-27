@@ -1,7 +1,7 @@
 import { LoaderFunctionArgs, json } from "@remix-run/cloudflare";
 import { Outlet, useFetcher, useLoaderData, useParams } from "@remix-run/react";
+import { Button } from "~/components/ui/button";
 import { DbApi } from "~/lib/dbApi";
-import { GoCardlessApi } from "~/lib/gocardless-api.server";
 
 export async function loader(args: LoaderFunctionArgs) {
   const bankId = args.params.bankId;
@@ -11,24 +11,13 @@ export async function loader(args: LoaderFunctionArgs) {
     return json({ bank: null, accounts: [] });
   }
 
-  const goCardlessApi = GoCardlessApi.create(args);
-
   const api = DbApi.create(args);
   const [bank, accounts] = await Promise.all([
     api.getBank(bankId),
     api.getAllAccounts(bankId),
   ]);
 
-  const accountsWithTransactions = await Promise.all(
-    accounts.map(async (account) => {
-      const transactions = await goCardlessApi.getAccountTransactions(
-        account.accountId
-      );
-      return { ...account, transactions };
-    })
-  );
-
-  return json({ bank, accounts: accountsWithTransactions });
+  return json({ bank, accounts });
 }
 
 export default function Bank() {
@@ -40,9 +29,10 @@ export default function Bank() {
   return (
     <div className="flex flex-col gap-4 items-center">
       <fetcher.Form method="POST" action="/api/sync-accounts">
-        <button type="submit" disabled={fetcher.state !== "idle"}>
+        <input type="hidden" name="bankId" value={params.bankId} />
+        <Button type="submit" disabled={fetcher.state !== "idle"}>
           Sync accounts
-        </button>
+        </Button>
       </fetcher.Form>
       <h1 className="text-xl">{bank?.name}</h1>
       <ul className="flex flex-col gap-4 max-w-lg min-w-[400px]">

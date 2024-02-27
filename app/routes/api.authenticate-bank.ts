@@ -8,14 +8,10 @@ export async function loader(request: Request) {
   return json({ message: "Hello, world!" });
 }
 
-export async function action(args: ActionFunctionArgs) {
-  const session = await requireLogin(args);
-  const goCardlessApi = await GoCardlessApi.create(args);
-  const goCardlessSession = await goCardlessApi.getSession();
+export async function action({ context, request }: ActionFunctionArgs) {
+  const goCardlessSession = context.goCardlessSession;
 
-  const api = DbApi.create(args);
-  const user = await api.getUserByEmail(session.email);
-  const institutionId = (await args.request.formData()).get("bank") as string;
+  const institutionId = (await request.formData()).get("bank") as string;
 
   if (!institutionId) {
     return new Response("Bank id is required", {
