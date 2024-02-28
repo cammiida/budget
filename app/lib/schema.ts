@@ -33,7 +33,7 @@ export const bank = sqliteTable(
   {
     requisitionId: text("requisition_id"),
     userId: integer("user_id")
-      .references(() => user.id)
+      .references(() => user.id, { onDelete: "cascade" })
       .notNull(),
     bankId: text("bank_id").notNull(),
     name: text("name").notNull(),

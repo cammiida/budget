@@ -9,7 +9,7 @@ import {
   NewBank,
   User,
   account,
-  bank,
+  bank as bankTable,
   user,
 } from "./schema";
 import { ServerArgs } from "./types";
@@ -53,18 +53,21 @@ export class DbApi {
 
     return await this.db
       .select()
-      .from(bank)
-      .where(eq(bank.userId, user.id))
+      .from(bankTable)
+      .where(eq(bankTable.userId, user.id))
       .all();
   }
 
-  async addBank(newBank: Omit<NewBank, "userId">) {
+  async addBank(bank: Omit<NewBank, "userId">): Promise<Bank> {
     const user = this.getCurrentUser();
 
     return this.db
-      .insert(bank)
-      .values({ ...newBank, userId: user.id })
-      .onConflictDoNothing()
+      .insert(bankTable)
+      .values({ ...bank, userId: user.id })
+      .onConflictDoUpdate({
+        target: [bankTable.userId, bankTable.bankId],
+        set: bank,
+      })
       .returning()
       .get();
   }
@@ -73,8 +76,8 @@ export class DbApi {
     const user = this.getCurrentUser();
 
     return this.db
-      .delete(bank)
-      .where(and(eq(bank.userId, user.id), eq(bank.bankId, bankId)))
+      .delete(bankTable)
+      .where(and(eq(bankTable.userId, user.id), eq(bankTable.bankId, bankId)))
       .returning()
       .get();
   }
@@ -84,8 +87,8 @@ export class DbApi {
 
     return this.db
       .select()
-      .from(bank)
-      .where(and(eq(bank.userId, user.id), eq(bank.bankId, bankId)))
+      .from(bankTable)
+      .where(and(eq(bankTable.userId, user.id), eq(bankTable.bankId, bankId)))
       .get();
   }
 
@@ -93,9 +96,9 @@ export class DbApi {
     const user = this.getCurrentUser();
 
     return this.db
-      .update(bank)
+      .update(bankTable)
       .set(updates)
-      .where(and(eq(bank.userId, user.id), eq(bank.bankId, bankId)))
+      .where(and(eq(bankTable.userId, user.id), eq(bankTable.bankId, bankId)))
       .returning();
   }
 
