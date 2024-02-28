@@ -4,6 +4,7 @@ import {
   ApiError,
   InstitutionsService,
   OpenAPI,
+  RequisitionRequest,
   RequisitionsService,
 } from "generated-sources/gocardless";
 import { Account, Bank } from "./schema";
@@ -53,13 +54,17 @@ export class GoCardlessApi {
     );
   }
 
-  async createRequisition(bankId: string) {
-    const requisition = await RequisitionsService.createRequisition({
+  async createRequisition({
+    bankId,
+    redirect,
+  }: {
+    bankId: string;
+    redirect: RequisitionRequest["redirect"];
+  }) {
+    return await RequisitionsService.createRequisition({
       institution_id: bankId,
-      redirect: "http://172.24.134.19:8788/api/authenticate-bank",
+      redirect,
     });
-
-    return requisition;
   }
 
   async getRequisition({ requisitionId }: { requisitionId: string }) {

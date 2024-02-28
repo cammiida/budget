@@ -1,9 +1,7 @@
 import { AppLoadContext, redirect } from "@remix-run/cloudflare";
+import { DbApi } from "../dbApi";
 import { GoCardlessApi } from "../gocardless-api.server";
 import { Account } from "../schema";
-import { ServerArgs } from "../types";
-import { getOrAddBank } from "./bank.server";
-import { getOrCreateRequisition } from "./requisition.server";
 
 export async function getAccountsForBank({
   bankId,
@@ -17,11 +15,16 @@ export async function getAccountsForBank({
     throw redirect("/login");
   }
 
-  const bank = await getOrAddBank({ bankId, context });
-  const requisition = await getOrCreateRequisition({ bankId, context });
-  const accountIds: string[] = requisition.accounts ?? [];
-
+  const dbApi = DbApi.create({ context });
   const goCardlessApi = GoCardlessApi.create({ context });
+  const bank = await dbApi.getBank(bankId);
+  const requisition = bank?.requisitionId
+    ? await goCardlessApi.getRequisition({
+        requisitionId: bank.requisitionId,
+      })
+    : null;
+
+  const accountIds: string[] = requisition?.accounts ?? [];
 
   return await Promise.all(
     accountIds.map(async (accountId) => {
@@ -34,7 +37,7 @@ export async function getAccountsForBank({
         accountId,
         userId: user.id,
         bankId,
-        name: accountDetails.account.name ?? `${bank.name} - ${accountId}`,
+        name: accountDetails.account.name ?? `${bank?.name} - ${accountId}`,
         ownerName: accountDetails.account.ownerName ?? "Unknown",
         balances: accountBalances.balances ?? [],
       } satisfies Account;

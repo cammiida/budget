@@ -2,11 +2,14 @@ import { ActionFunctionArgs, json, redirect } from "@remix-run/cloudflare";
 import { DbApi } from "~/lib/dbApi";
 import { NewAccount } from "~/lib/schema";
 import { getAccountsForBank } from "~/lib/services/accounts.server";
-import { getOrCreateRequisition } from "~/lib/services/requisition.server";
 
 export async function action({ context, request }: ActionFunctionArgs) {
   const formData = await request.formData();
-  const bankId = formData.get("bankId") as string;
+  const bankId = formData.get("bankId")?.toString();
+
+  if (!bankId) {
+    throw new Response("Bank ID is required", { status: 400 });
+  }
 
   const user = context.user;
   if (!user) {
@@ -14,16 +17,6 @@ export async function action({ context, request }: ActionFunctionArgs) {
   }
 
   try {
-    const requisition = await getOrCreateRequisition({ bankId, context });
-    const isRequisitionActivated = requisition.agreement;
-    if (!isRequisitionActivated) {
-      if (!requisition.link) {
-        throw Error("No requisition link");
-      } else {
-        return redirect(requisition.link);
-      }
-    }
-
     const accounts: NewAccount[] = await getAccountsForBank({
       bankId,
       context,

@@ -2,14 +2,13 @@ import {
   ActionFunctionArgs,
   LoaderFunctionArgs,
   json,
+  redirect,
 } from "@remix-run/cloudflare";
-import { Form, useFetcher, useLoaderData } from "@remix-run/react";
+import { Form, Link, useFetcher, useLoaderData } from "@remix-run/react";
 import { requireLogin } from "~/lib/auth.server";
 import { DbApi } from "~/lib/dbApi";
 import { GoCardlessApi } from "~/lib/gocardless-api.server";
 import { Bank } from "~/lib/schema";
-import { getOrAddBank } from "~/lib/services/bank.server";
-import { getOrCreateRequisition } from "~/lib/services/requisition.server";
 
 export async function loader({ context, request }: LoaderFunctionArgs) {
   const session = await requireLogin({ context, request });
@@ -25,34 +24,52 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
 }
 
 export async function action({ context, request }: ActionFunctionArgs) {
-  const goCardlessApi = GoCardlessApi.create({ context });
-
   const formData = await request.formData();
-  const bankId = formData.get("bankId") as string;
+  const bankId = formData.get("bankId")?.toString();
 
-  const bank = await getOrAddBank({ bankId, context });
-  if (bank.requisitionId) {
-    try {
-      await getOrCreateRequisition({ bankId: bank.bankId, context });
-      return json({ bank });
-    } catch (error) {
-      console.error(
-        "Failed to get requisition. Requisition might be expired.",
-        error
-      );
-    }
+  if (!bankId) {
+    throw new Response("Bank ID is required", { status: 400 });
   }
 
+  const dbApi = DbApi.create({ context });
   try {
-    const requisition = await goCardlessApi.createRequisition(bankId);
-    // TODO: needed? Can some integrations not need authorization through a link?
-    if (!requisition.link) {
+    // get or add bank
+    const bank = await dbApi.getBank(bankId);
+    console.log("bank", bank);
+
+    // get existing requisition
+    const goCardlessApi = GoCardlessApi.create({ context });
+    const existingRequistion = bank?.requisitionId
+      ? await goCardlessApi.getRequisition({
+          requisitionId: bank.requisitionId,
+        })
+      : null;
+
+    // if requisition exists and is not expired, return requisition
+    if (existingRequistion && existingRequistion.status !== "EX") {
+      return json({ bank, requisition: existingRequistion });
+    }
+
+    // else create a new requisition and redirect to bank authorization
+    const url = new URL(request.url);
+
+    // So that redirects work for all three variants
+    if (url.hostname === "0.0.0.0" || url.hostname === "127.0.0.1") {
+      url.hostname = "localhost";
+    }
+
+    const newRequisition = await goCardlessApi.createRequisition({
+      bankId,
+      redirect: `${url.protocol}//${url.host}/api/authenticate-bank/${bankId}`,
+    });
+
+    if (!newRequisition.link) {
       throw new Response("Failed to create requisition with link", {
         status: 500,
       });
     }
 
-    return json({ bank });
+    return redirect(newRequisition.link);
   } catch (error) {
     console.error("Failed to create requisition", error);
     throw new Response("Failed to create requisition", { status: 500 });
@@ -63,17 +80,11 @@ function Banks() {
   const { allBanks: banks, chosenBanks } = useLoaderData<typeof loader>();
 
   return (
-    <div>
-      <div className="flex flex-col gap-4">
-        <h1 className="text-lg">Your banks</h1>
-        {chosenBanks.map((it) => (
-          <BankComponent bank={it} key={it.bankId} />
-        ))}
-      </div>
-      <div>
+    <div className="flex flex-col items-center max-w-lg gap-10 mx-auto">
+      <div className="w-full">
         <h2 className="text-lg">Add a new bank</h2>
         <Form method="post">
-          <select name="bank">
+          <select name="bankId">
             {banks.map((bank) => (
               <option key={bank.id} value={bank.id}>
                 {bank.name}
@@ -82,6 +93,12 @@ function Banks() {
           </select>
           <button type="submit">Submit</button>
         </Form>
+      </div>
+      <div className="flex flex-col gap-4 w-full">
+        <h1 className="text-lg">Your banks</h1>
+        {chosenBanks.map((it) => (
+          <BankComponent bank={it} key={it.bankId} />
+        ))}
       </div>
     </div>
   );
@@ -94,13 +111,21 @@ function BankComponent({ bank }: { bank: Bank }) {
   const isDeleting = fetcher.state !== "idle";
 
   return (
-    <div key={bank.bankId} className="flex gap-2">
-      <img
-        className="w-8 h-8 rounded-full"
-        src={bank.logo ?? undefined}
-        alt={bank.name}
-      />
-      <span>{bank.name}</span>
+    <div
+      key={bank.bankId}
+      className="flex gap-2 bg-slate-50 p-5 rounded-md shadow-sm"
+    >
+      <Link
+        className="flex grow gap-2 items-center"
+        to={`/banks/${bank.bankId}`}
+      >
+        <img
+          className="w-8 h-8 rounded-full"
+          src={bank.logo ?? undefined}
+          alt={bank.name}
+        />
+        <span>{bank.name}</span>
+      </Link>
       <fetcher.Form method="delete" action="/api/remove-bank">
         <input type="hidden" name="bankId" value={bank.bankId} />
         <button
