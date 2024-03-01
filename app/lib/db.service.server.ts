@@ -1,5 +1,6 @@
-import type { DrizzleD1Database } from "drizzle-orm/d1";
+import { AppLoadContext } from "@remix-run/cloudflare";
 import { drizzle } from "drizzle-orm/d1";
+import * as schema from "./schema";
 
 const contextWithDb = (
   context: Record<string, unknown>
@@ -7,12 +8,10 @@ const contextWithDb = (
   return "db" in context;
 };
 
-export const getDbFromContext = (
-  context: Record<string, unknown>
-): DrizzleD1Database => {
+export const getDbFromContext = (context: AppLoadContext) => {
   if (!contextWithDb(context)) {
     throw new Error("No database in context");
   }
 
-  return drizzle(context.db);
+  return drizzle(context.db, { schema });
 };

@@ -1,6 +1,5 @@
-import { InferInsertModel, InferSelectModel } from "drizzle-orm";
+import { InferInsertModel, InferSelectModel, relations } from "drizzle-orm";
 import {
-  blob,
   foreignKey,
   integer,
   primaryKey,
@@ -25,6 +24,11 @@ export const user = sqliteTable(
   })
 );
 
+export const userRelations = relations(user, ({ many }) => ({
+  banks: many(bank),
+  accounts: many(account),
+}));
+
 export type User = InferSelectModel<typeof user>;
 export type NewUser = InferInsertModel<typeof user>;
 
@@ -46,6 +50,14 @@ export const bank = sqliteTable(
     }),
   })
 );
+
+export const bankRelations = relations(bank, ({ one, many }) => ({
+  user: one(user, {
+    fields: [bank.userId],
+    references: [user.id],
+  }),
+  accounts: many(account),
+}));
 
 export type Bank = InferSelectModel<typeof bank>;
 export type NewBank = InferInsertModel<typeof bank>;
@@ -73,6 +85,17 @@ export const account = sqliteTable(
     }),
   })
 );
+
+export const accountRelations = relations(account, ({ one }) => ({
+  bank: one(bank, {
+    fields: [account.userId, account.bankId],
+    references: [bank.userId, bank.bankId],
+  }),
+  user: one(user, {
+    fields: [account.userId],
+    references: [user.id],
+  }),
+}));
 
 export type Account = InferSelectModel<typeof account>;
 export type NewAccount = InferInsertModel<typeof account>;

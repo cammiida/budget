@@ -1,7 +1,8 @@
 import { AppLoadContext } from "@remix-run/cloudflare";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { DrizzleD1Database } from "drizzle-orm/d1";
 import { getDbFromContext } from "./db.service.server";
+import * as schema from "./schema";
 import {
   Account,
   Bank,
@@ -12,10 +13,9 @@ import {
   bank as bankTable,
   user,
 } from "./schema";
-import { ServerArgs } from "./types";
 
 export class DbApi {
-  db: DrizzleD1Database;
+  db: DrizzleD1Database<typeof schema>;
   context: AppLoadContext;
 
   private constructor({ context }: { context: AppLoadContext }) {
