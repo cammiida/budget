@@ -154,4 +154,14 @@ export class DbApi {
       .returning()
       .get();
   }
+
+  async deleteCategory(id: number) {
+    const currentUser = this.getCurrentUser();
+
+    return this.db
+      .delete(category)
+      .where(and(eq(category.id, id), eq(category.userId, currentUser.id)))
+      .returning()
+      .get();
+  }
 }
