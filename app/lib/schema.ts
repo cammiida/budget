@@ -7,6 +7,7 @@ import {
   text,
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
+import { createInsertSchema } from "drizzle-zod";
 import { BalanceSchema } from "generated-sources/gocardless";
 
 export const user = sqliteTable(
@@ -27,6 +28,7 @@ export const user = sqliteTable(
 export const userRelations = relations(user, ({ many }) => ({
   banks: many(bank),
   accounts: many(account),
+  categories: many(category),
 }));
 
 export type User = InferSelectModel<typeof user>;
@@ -99,3 +101,33 @@ export const accountRelations = relations(account, ({ one }) => ({
 
 export type Account = InferSelectModel<typeof account>;
 export type NewAccount = InferInsertModel<typeof account>;
+
+export const category = sqliteTable(
+  "category",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: integer("user_id")
+      .references(() => user.id, { onDelete: "cascade" })
+      .notNull(),
+    name: text("name").notNull(),
+    color: text("color"),
+  },
+  (category) => ({
+    uniqueForUser: uniqueIndex("uniqueIndex").on(
+      category.userId,
+      category.name
+    ),
+  })
+);
+
+export const categoryRelations = relations(category, ({ one }) => ({
+  user: one(user, {
+    fields: [category.userId],
+    references: [user.id],
+  }),
+}));
+
+export type Category = InferSelectModel<typeof category>;
+export type NewCategory = InferInsertModel<typeof category>;
+
+export const createCategory = createInsertSchema(category);

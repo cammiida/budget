@@ -36,6 +36,20 @@
       "when": 1709040678909,
       "tag": "0004_useful_loners",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1709297067229,
+      "tag": "0005_bizarre_zzzax",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1709297530534,
+      "tag": "0006_colossal_smasher",
+      "breakpoints": true
     }
   ]
 }

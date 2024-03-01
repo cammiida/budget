@@ -8,9 +8,11 @@ import {
   Bank,
   NewAccount,
   NewBank,
+  NewCategory,
   User,
   account,
   bank as bankTable,
+  category,
   user,
 } from "./schema";
 
@@ -130,5 +132,26 @@ export class DbApi {
       console.error(error);
       throw new Response("Unable to save accounts", { status: 500 });
     }
+  }
+
+  async getCategories() {
+    const currentUser = this.getCurrentUser();
+
+    return this.db
+      .select()
+      .from(category)
+      .where(eq(category.userId, currentUser.id))
+      .all();
+  }
+
+  async createCategory(data: Omit<NewCategory, "userId">) {
+    const currentUser = this.getCurrentUser();
+
+    return this.db
+      .insert(category)
+      .values({ ...data, userId: currentUser.id })
+      .onConflictDoNothing()
+      .returning()
+      .get();
   }
 }
