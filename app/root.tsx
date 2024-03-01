@@ -12,13 +12,15 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
+  isRouteErrorResponse,
   useRouteError,
   useRouteLoaderData,
 } from "@remix-run/react";
+import { DrizzleError } from "drizzle-orm";
+import { ApiError } from "generated-sources/gocardless";
 import { Navbar } from "./components/ui/navbar";
 import { getUserSession } from "./lib/auth.server";
 import { flashSession } from "./lib/cookie.server";
-import { GoCardlessApi } from "./lib/gocardless-api.server";
 import styles from "./tailwind.css";
 
 export const links: LinksFunction = () => [{ rel: "stylesheet", href: styles }];
@@ -77,20 +79,46 @@ export default function App() {
 
 export function ErrorBoundary() {
   const error = useRouteError();
-  console.error(error);
+
+  function getContent() {
+    if (isRouteErrorResponse(error)) {
+      return (
+        <div>
+          <h1>Route Error</h1>
+          <pre>{JSON.stringify(error, null, 2)}</pre>
+        </div>
+      );
+    }
+
+    if (error instanceof DrizzleError) {
+      return (
+        <div>
+          <h1>Drizzle Error</h1>
+          <pre>{JSON.stringify(error, null, 2)}</pre>
+        </div>
+      );
+    }
+
+    if (error instanceof ApiError) {
+      return (
+        <div>
+          <h1>API Error</h1>
+          <pre>{JSON.stringify(error, null, 2)}</pre>
+        </div>
+      );
+    }
+    return <div>{JSON.stringify(error)}</div>;
+  }
 
   return (
     <html>
       <head>
-        <title>Oh no!</title>
+        <title>Error</title>
         <Meta />
         <Links />
       </head>
-      <body>
-        <h1>Oh no!</h1>
-        <p>Something went wrong.</p>
-        <Scripts />
-      </body>
+      <body>{getContent()}</body>
+      <Scripts />
     </html>
   );
 }
