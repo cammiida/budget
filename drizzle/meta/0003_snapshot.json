@@ -1,8 +1,8 @@
 {
   "version": "5",
   "dialect": "sqlite",
-  "id": "abf7c6c3-b528-4ea6-9c3b-ccb25efbd114",
-  "prevId": "f821b159-2602-4da9-9c63-d6dae6a7f5a1",
+  "id": "7ee721fc-d3ae-4f5e-ac50-2126935a0caa",
+  "prevId": "ff4be785-7bef-40df-92f6-285853ebd516",
   "tables": {
     "account": {
       "name": "account",
@@ -52,19 +52,42 @@
       },
       "indexes": {},
       "foreignKeys": {
+        "account_user_id_user_id_fk": {
+          "name": "account_user_id_user_id_fk",
+          "tableFrom": "account",
+          "tableTo": "user",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
         "bankReference": {
           "name": "bankReference",
           "tableFrom": "account",
           "tableTo": "bank",
-          "columnsFrom": ["user_id", "bank_id"],
-          "columnsTo": ["user_id", "bank_id"],
+          "columnsFrom": [
+            "user_id",
+            "bank_id"
+          ],
+          "columnsTo": [
+            "user_id",
+            "bank_id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
         "account_user_id_bank_id_account_id_pk": {
-          "columns": ["account_id", "bank_id", "user_id"],
+          "columns": [
+            "account_id",
+            "bank_id",
+            "user_id"
+          ],
           "name": "account_user_id_bank_id_account_id_pk"
         }
       },
@@ -73,11 +96,11 @@
     "bank": {
       "name": "bank",
       "columns": {
-        "requisition_id": {
-          "name": "requisition_id",
+        "bank_id": {
+          "name": "bank_id",
           "type": "text",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "autoincrement": false
         },
         "user_id": {
@@ -87,18 +110,18 @@
           "notNull": true,
           "autoincrement": false
         },
-        "bank_id": {
-          "name": "bank_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
         "name": {
           "name": "name",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
+          "autoincrement": false
+        },
+        "requisition_id": {
+          "name": "requisition_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
           "autoincrement": false
         },
         "logo": {
@@ -122,18 +145,85 @@
           "name": "bank_user_id_user_id_fk",
           "tableFrom": "bank",
           "tableTo": "user",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
-        "bank_user_id_bank_id_pk": {
-          "columns": ["bank_id", "user_id"],
-          "name": "bank_user_id_bank_id_pk"
+        "bank_bank_id_user_id_pk": {
+          "columns": [
+            "bank_id",
+            "user_id"
+          ],
+          "name": "bank_bank_id_user_id_pk"
         }
       },
+      "uniqueConstraints": {}
+    },
+    "category": {
+      "name": "category",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "color": {
+          "name": "color",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "unique_on": {
+          "name": "unique_on",
+          "columns": [
+            "user_id",
+            "name"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "category_user_id_user_id_fk": {
+          "name": "category_user_id_user_id_fk",
+          "tableFrom": "category",
+          "tableTo": "user",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
     "user": {
@@ -153,13 +243,6 @@
           "notNull": true,
           "autoincrement": false
         },
-        "avatar": {
-          "name": "avatar",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
         "name": {
           "name": "name",
           "type": "text",
@@ -171,7 +254,9 @@
       "indexes": {
         "emailIdx": {
           "name": "emailIdx",
-          "columns": ["email"],
+          "columns": [
+            "email"
+          ],
           "isUnique": true
         }
       },

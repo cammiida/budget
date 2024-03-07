@@ -3,8 +3,7 @@ CREATE TABLE IF NOT EXISTS `category` (
 	`user_id` integer NOT NULL,
 	`name` text NOT NULL,
 	`color` text,
-	`icon` text,
 	FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `uniqueIndex` ON `category` (`user_id`,`name`);
+CREATE UNIQUE INDEX IF NOT EXISTS `unique_on` ON `category` (`user_id`,`name`);

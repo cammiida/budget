@@ -1,17 +1,17 @@
 {
   "version": "5",
   "dialect": "sqlite",
-  "id": "fb2b26b6-52ba-4603-ac36-369a9c357d46",
-  "prevId": "03ce3df3-47c0-4654-9d6d-e514eea10351",
+  "id": "cb932ba7-1fed-4527-8412-46016a3f7435",
+  "prevId": "e0bb569b-794f-4969-8470-e86197590a32",
   "tables": {
     "bank": {
       "name": "bank",
       "columns": {
-        "requisition_id": {
-          "name": "requisition_id",
+        "bank_id": {
+          "name": "bank_id",
           "type": "text",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "autoincrement": false
         },
         "user_id": {
@@ -21,18 +21,18 @@
           "notNull": true,
           "autoincrement": false
         },
-        "bank_id": {
-          "name": "bank_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
         "name": {
           "name": "name",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
+          "autoincrement": false
+        },
+        "requisition_id": {
+          "name": "requisition_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
           "autoincrement": false
         },
         "logo": {
@@ -62,17 +62,17 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
-        "bank_user_id_bank_id_pk": {
+        "bank_bank_id_user_id_pk": {
           "columns": [
             "bank_id",
             "user_id"
           ],
-          "name": "bank_user_id_bank_id_pk"
+          "name": "bank_bank_id_user_id_pk"
         }
       },
       "uniqueConstraints": {}
@@ -92,13 +92,6 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false
-        },
-        "avatar": {
-          "name": "avatar",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
           "autoincrement": false
         },
         "name": {

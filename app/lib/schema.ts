@@ -17,7 +17,6 @@ export const user = sqliteTable(
       autoIncrement: true,
     }),
     email: text("email").notNull(),
-    avatar: text("avatar"),
     name: text("name"),
   },
   (user) => ({
@@ -37,19 +36,17 @@ export type NewUser = InferInsertModel<typeof user>;
 export const bank = sqliteTable(
   "bank",
   {
-    requisitionId: text("requisition_id"),
+    bankId: text("bank_id").notNull(),
     userId: integer("user_id")
       .references(() => user.id, { onDelete: "cascade" })
       .notNull(),
-    bankId: text("bank_id").notNull(),
     name: text("name").notNull(),
+    requisitionId: text("requisition_id"),
     logo: text("logo"),
     bic: text("bic"),
   },
   (bank) => ({
-    id: primaryKey({
-      columns: [bank.userId, bank.bankId],
-    }),
+    pk: primaryKey({ columns: [bank.bankId, bank.userId] }),
   })
 );
 
@@ -68,7 +65,9 @@ export const account = sqliteTable(
   "account",
   {
     accountId: text("account_id").notNull(),
-    userId: integer("user_id").notNull(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
     bankId: text("bank_id").notNull(),
     name: text("name").notNull(),
     ownerName: text("owner_name"),
@@ -81,8 +80,8 @@ export const account = sqliteTable(
       columns: [account.userId, account.bankId],
       foreignColumns: [bank.userId, bank.bankId],
       name: "bankReference",
-    }),
-    id: primaryKey({
+    }).onDelete("cascade"),
+    pk: primaryKey({
       columns: [account.userId, account.bankId, account.accountId],
     }),
   })
@@ -113,10 +112,7 @@ export const category = sqliteTable(
     color: text("color"),
   },
   (category) => ({
-    uniqueForUser: uniqueIndex("uniqueIndex").on(
-      category.userId,
-      category.name
-    ),
+    uniqueOne: uniqueIndex("unique_on").on(category.userId, category.name),
   })
 );
 
