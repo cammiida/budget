@@ -11,7 +11,7 @@
     "typecheck": "tsc",
     "wrangler": "wrangler pages dev ./public --local",
     "up": "drizzle-kit up:sqlite",
-    "generate-clients": "openapi --input https://ob.gocardless.com/api/v2/swagger.json --output ./generated-sources/gocardless",
+    "generate-clients": "rm -rf ./generated-sources && openapi --input https://ob.gocardless.com/api/v2/swagger.json --output ./generated-sources/gocardless",
     "generate-migrations": "drizzle-kit generate:sqlite --schema=./app/lib/schema.ts",
     "list-migrations": "wrangler d1 migrations list budget --local",
     "apply-migrations": "wrangler d1 migrations apply budget --local",
