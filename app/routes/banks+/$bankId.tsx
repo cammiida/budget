@@ -14,7 +14,7 @@ export async function loader(args: LoaderFunctionArgs) {
   const api = DbApi.create(args);
   const [bank, accounts] = await Promise.all([
     api.getBank(bankId),
-    api.getAllAccounts(bankId),
+    api.getAccountsForBanks([bankId]),
   ]);
 
   return json({ bank, accounts });

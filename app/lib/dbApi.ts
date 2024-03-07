@@ -68,7 +68,7 @@ export class DbApi {
       .values({ ...bank, userId: user.id })
       .onConflictDoUpdate({
         target: [bankTable.userId, bankTable.bankId],
-        set: bank,
+        set: { ...bank, userId: user.id },
       })
       .returning()
       .get();
@@ -104,13 +104,13 @@ export class DbApi {
       .returning();
   }
 
-  async getAllAccounts(bankId: string) {
+  async getAccountsForBanks(bankIds: string[]) {
     const user = this.getCurrentUser();
 
     return this.db
       .select()
       .from(account)
-      .where(and(eq(account.userId, user.id), eq(account.bankId, bankId)))
+      .where(and(eq(account.userId, user.id), inArray(account.bankId, bankIds)))
       .all();
   }
 
