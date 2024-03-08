@@ -11,7 +11,7 @@ import {
   useLoaderData,
   useNavigation,
 } from "@remix-run/react";
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { route } from "routes-gen";
 import { z } from "zod";
 import { Button } from "~/components/ui/button";
@@ -37,7 +37,20 @@ export async function loader({ context }: LoaderFunctionArgs) {
   const db = getDbFromContext(context);
   const transactions = await db.query.transaction.findMany({
     where: eq(transactionTable.userId, userId),
-    with: { account: true, bank: true, category: true },
+    orderBy: desc(transactionTable.valueDate),
+    columns: {
+      additionalInformation: true,
+      amount: true,
+      bookingDate: true,
+      valueDate: true,
+      currency: true,
+      transactionId: true,
+    },
+    with: {
+      account: { columns: { bban: true, accountId: true } },
+      bank: { columns: { logo: true, name: true } },
+      category: { columns: { id: true, name: true } },
+    },
   });
 
   const categories = await db.query.category.findMany({
@@ -177,24 +190,24 @@ function TransactionRow({
 
   return (
     <tr className="border border-slate-100">
-      <td className="p-4">
+      <DataCell>
         <img
           className="h-8 w-8 rounded-full"
           src={bank.logo ?? undefined}
           alt={bank.name}
         />
         {bank.name}
-      </td>
-      <td className="p-4">{account.bban}</td>
-      <td className="p-4">
+      </DataCell>
+      <DataCell>{account.bban}</DataCell>
+      <DataCell>
         {date && <small>{formatDate(date)}</small>}
         <br />
         {transaction.additionalInformation}
-      </td>
-      <td className="p-4">
+      </DataCell>
+      <DataCell>
         {transaction.amount} {transaction.currency}
-      </td>
-      <td className="p-4">
+      </DataCell>
+      <DataCell>
         <fetcher.Form
           method="POST"
           action={route("/api/set-transaction-category")}
@@ -222,7 +235,11 @@ function TransactionRow({
             ))}
           </select>
         </fetcher.Form>
-      </td>
+      </DataCell>
     </tr>
   );
+}
+
+function DataCell({ children }: { children: React.ReactNode }) {
+  return <td className="p-4">{children}</td>;
 }
