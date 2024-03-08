@@ -99,9 +99,10 @@ export class GoCardlessApi {
   }
 
   // wrong type definition in the generated sources
-  async getAccountTransactions(accountId: string) {
+  async getAccountTransactions(accountId: string, dateFrom?: string) {
     return (await AccountsService.retrieveAccountTransactions(
-      accountId
+      accountId,
+      dateFrom
     )) as unknown as {
       transactions: BankTransactionStatusSchema;
     };

@@ -1,5 +1,5 @@
 import { AppLoadContext } from "@remix-run/cloudflare";
-import { SQL, and, eq, inArray, sql } from "drizzle-orm";
+import { SQL, and, desc, eq, inArray, sql } from "drizzle-orm";
 import { DrizzleD1Database } from "drizzle-orm/d1";
 import { getDbFromContext } from "./db.service.server";
 import * as schema from "./schema";
@@ -15,6 +15,7 @@ import {
   account,
   bank as bankTable,
   category,
+  transaction,
   transaction as transactionTable,
   user,
 } from "./schema";
@@ -117,6 +118,16 @@ export class DbApi {
       .all();
   }
 
+  async getAccounts() {
+    const user = this.getCurrentUser();
+
+    return this.db
+      .select()
+      .from(account)
+      .where(eq(account.userId, user.id))
+      .all();
+  }
+
   async saveAccounts(accounts: NewAccount[]): Promise<Account[]> {
     if (!accounts.length) {
       return [];
@@ -215,5 +226,16 @@ export class DbApi {
         statusText: JSON.stringify(error),
       });
     }
+  }
+
+  async getLatestTransactionDate() {
+    const currentUser = this.getCurrentUser();
+
+    return this.db
+      .select({ date: transaction.bookingDate })
+      .from(transaction)
+      .where(eq(transaction.userId, currentUser.id))
+      .orderBy(desc(transaction.bookingDate))
+      .get();
   }
 }

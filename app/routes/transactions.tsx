@@ -5,50 +5,50 @@ import {
   redirect,
 } from "@remix-run/cloudflare";
 import { Form, useLoaderData, useNavigation } from "@remix-run/react";
-import { eq } from "drizzle-orm";
+import { z } from "zod";
 import { Button } from "~/components/ui/button";
-import { getDbFromContext } from "~/lib/db.service.server";
 import { DbApi } from "~/lib/dbApi";
 import { GoCardlessApi } from "~/lib/gocardless-api.server";
-import {
-  NewTransaction,
-  Transaction,
-  account as accountTable,
-} from "~/lib/schema";
+import { NewTransaction, Transaction } from "~/lib/schema";
 import { formatDate, remoteToInternalTransaction } from "~/lib/utils";
 
 export async function loader({ context }: LoaderFunctionArgs) {
   const dbApi = DbApi.create({ context });
 
   const transactions = await dbApi.getTransactions();
+  const lastSavedTransactionDate = (
+    await dbApi.getLatestTransactionDate()
+  )?.date
+    ?.toISOString()
+    .split("T")[0];
 
-  return json({ transactions });
+  return json({ transactions, lastSavedTransactionDate });
 }
 
-export async function action({ context }: ActionFunctionArgs) {
-  const dbApi = DbApi.create({ context });
-
+export async function action({ request, context }: ActionFunctionArgs) {
   const user = context.user;
   if (!user) {
     return redirect("/auth/login", { status: 401 });
   }
-  const db = getDbFromContext(context);
-  const goCardlessApi = GoCardlessApi.create({ context });
-  const allAccounts = await db
-    .select()
-    .from(accountTable)
-    .where(eq(accountTable.userId, user.id))
-    .all();
 
-  const res = await Promise.all(
-    allAccounts.flatMap(({ accountId, bankId }) =>
+  const formData = await request.formData();
+  const fromDate =
+    z.string().nullish().parse(formData.get("fromDate")) ?? undefined;
+
+  const dbApi = DbApi.create({ context });
+  const goCardlessApi = GoCardlessApi.create({ context });
+
+  const accounts = await dbApi.getAccounts();
+
+  const remoteTransactions = await Promise.all(
+    accounts.flatMap(({ accountId, bankId }) =>
       goCardlessApi
-        .getAccountTransactions(accountId)
+        .getAccountTransactions(accountId, fromDate)
         .then((res) => ({ ...res.transactions, bankId, accountId }))
     )
   );
 
-  const newTransactions: NewTransaction[] = res.flatMap(
+  const transformedTransactions: NewTransaction[] = remoteTransactions.flatMap(
     ({ pending, booked, accountId, bankId }) => {
       const pendingTransactions = (pending ?? []).flatMap((it) =>
         remoteToInternalTransaction({
@@ -75,14 +75,14 @@ export async function action({ context }: ActionFunctionArgs) {
 
   let savedTransactions: Transaction[] = [];
   const limit = 5;
-  for (let start = 0; start < newTransactions.length; start += limit) {
+  for (let start = 0; start < transformedTransactions.length; start += limit) {
     const end =
-      start + limit > newTransactions.length
-        ? newTransactions.length
+      start + limit > transformedTransactions.length
+        ? transformedTransactions.length
         : start + limit;
 
     const slicedResults = await dbApi.saveTransactions(
-      newTransactions.slice(start, end)
+      transformedTransactions.slice(start, end)
     );
 
     savedTransactions = [...savedTransactions, ...slicedResults];
@@ -92,7 +92,8 @@ export async function action({ context }: ActionFunctionArgs) {
 }
 
 export default function Transactions() {
-  const { transactions } = useLoaderData<typeof loader>();
+  const { transactions, lastSavedTransactionDate } =
+    useLoaderData<typeof loader>();
   const navigation = useNavigation();
   const isNavigating = navigation.state !== "idle";
 
@@ -101,6 +102,14 @@ export default function Transactions() {
       <div className="flex justify-between items-end mb-4">
         <h1 className="text-xl">Transactions</h1>
         <Form method="POST">
+          {lastSavedTransactionDate && (
+            <input
+              readOnly
+              type="hidden"
+              name="fromDate"
+              value={lastSavedTransactionDate}
+            />
+          )}
           <Button disabled={isNavigating}>Sync transactions</Button>
         </Form>
       </div>
