@@ -98,7 +98,7 @@ export class GoCardlessApi {
     return AccountsService.retrieveAccountDetails(accountId);
   }
 
-  // wrong type definition in the generated sources
+  // FIXME: wrong type definition in the generated sources
   async getAccountTransactions(accountId: string, dateFrom?: string) {
     return (await AccountsService.retrieveAccountTransactions(
       accountId,

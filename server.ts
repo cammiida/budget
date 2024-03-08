@@ -1,4 +1,4 @@
-import { AppLoadContext, Session, json } from "@remix-run/cloudflare";
+import { AppLoadContext, Session, json, redirect } from "@remix-run/cloudflare";
 import {
   createPagesFunctionHandlerParams,
   createRequestHandler,
@@ -18,6 +18,12 @@ import {
   setGoCardlessSession,
 } from "~/lib/cookie.server";
 import { GoogleStrategy } from "~/lib/google-strategy.server";
+
+const ALLOW_UNAUTHENTICATED: `/${string}`[] = [
+  "/auth/login",
+  "/auth/google/callback",
+  "/auth/logout",
+] as const;
 
 type PagesContext = { DB: D1Database };
 
@@ -58,6 +64,11 @@ export const onRequest: ReturnType<
   const user: GoogleSession | null = session.get(
     GoogleStrategy.authenticatorOptions.sessionKey
   );
+
+  const url = new URL(context.request.url);
+  if (!user && !ALLOW_UNAUTHENTICATED.some((it) => it === url.pathname)) {
+    return redirect("/auth/login");
+  }
 
   const handler = createPagesFunctionHandler({
     build,
