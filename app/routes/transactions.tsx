@@ -47,7 +47,7 @@ export async function loader({ context }: LoaderFunctionArgs) {
       transactionId: true,
     },
     with: {
-      account: { columns: { bban: true, accountId: true } },
+      account: { columns: { bban: true, accountId: true, name: true } },
       bank: { columns: { logo: true, name: true } },
       category: { columns: { id: true, name: true } },
     },
@@ -198,7 +198,11 @@ function TransactionRow({
         />
         {bank.name}
       </DataCell>
-      <DataCell>{account.bban}</DataCell>
+      <DataCell>
+        <small>{account.bban}</small>
+        <br />
+        {account.name.split(",").slice(0, -1).join(", ")}
+      </DataCell>
       <DataCell>
         {date && <small>{formatDate(date)}</small>}
         <br />
