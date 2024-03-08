@@ -10,6 +10,7 @@ import {
 } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { BalanceSchema } from "generated-sources/gocardless";
+import { z } from "zod";
 
 export const user = sqliteTable(
   "user",
@@ -115,6 +116,7 @@ export const category = sqliteTable(
       .notNull(),
     name: text("name").notNull(),
     color: text("color"),
+    keywords: text("keywords", { mode: "json" }).$type<string[]>(),
   },
   (category) => ({
     uniqueOne: uniqueIndex("unique_on").on(category.userId, category.name),
@@ -132,7 +134,14 @@ export const categoryRelations = relations(category, ({ one, many }) => ({
 export type Category = InferSelectModel<typeof category>;
 export type NewCategory = InferInsertModel<typeof category>;
 
-export const createCategory = createInsertSchema(category);
+export const createCategory = createInsertSchema(category, {
+  userId: z.number().optional(),
+  keywords: z
+    .string()
+    .transform((arg) => arg.split(","))
+    .or(z.array(z.string()))
+    .optional(),
+});
 
 const timestamp = customType<{
   data: Date;
