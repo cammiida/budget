@@ -1,7 +1,7 @@
 import { ActionFunctionArgs, json, redirect } from "@remix-run/cloudflare";
 import { DbApi } from "~/lib/dbApi";
-import { NewAccount } from "~/lib/schema";
-import { getAccountsForBank } from "~/lib/services/accounts.server";
+import { GoCardlessApi } from "~/lib/gocardless-api.server";
+import { Account, NewAccount } from "~/lib/schema";
 
 export async function action({ context, request }: ActionFunctionArgs) {
   const formData = await request.formData();
@@ -17,13 +17,48 @@ export async function action({ context, request }: ActionFunctionArgs) {
   }
 
   try {
-    const accounts: NewAccount[] = await getAccountsForBank({
-      bankId,
-      context,
-    });
+    const dbApi = DbApi.create({ context });
+    const goCardlessApi = GoCardlessApi.create({ context });
+    const bank = await dbApi.getBank(bankId);
+
+    const requisition = bank?.requisitionId
+      ? await goCardlessApi.getRequisition({
+          requisitionId: bank.requisitionId,
+        })
+      : null;
+
+    const accountIds: string[] = requisition?.accounts ?? [];
+
+    const remoteAccounts = await Promise.all(
+      accountIds.map(async (accountId) => {
+        const [accountDetails, accountBalances] = await Promise.all([
+          goCardlessApi.getAccountDetails(accountId),
+          goCardlessApi.getAccountBalances(accountId),
+        ]);
+
+        return {
+          accountId,
+          accountDetails,
+          accountBalances,
+        };
+      }),
+    );
+
+    const transformedAccounts = remoteAccounts.map(
+      ({ accountId, accountDetails, accountBalances }) => {
+        return {
+          accountId,
+          userId: user.id,
+          bankId,
+          name: accountDetails.account.name ?? `${bank?.name} - ${accountId}`,
+          ownerName: accountDetails.account.ownerName ?? "Unknown",
+          balances: accountBalances.balances ?? [],
+        } satisfies NewAccount;
+      },
+    );
 
     const savedAccounts = await DbApi.create({ context }).saveAccounts(
-      accounts
+      transformedAccounts,
     );
 
     return json({
