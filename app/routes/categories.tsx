@@ -19,7 +19,7 @@ export async function loader({ context }: LoaderFunctionArgs) {
 
 async function createCategoryAction(
   formData: FormData,
-  context: AppLoadContext
+  context: AppLoadContext,
 ) {
   const data = createCategory
     .omit({ userId: true })
@@ -33,7 +33,7 @@ async function createCategoryAction(
         success: false,
         error: "Failed to create category. Category already exists.",
       },
-      { status: 409 }
+      { status: 409 },
     );
   }
 
@@ -42,7 +42,7 @@ async function createCategoryAction(
 
 async function deleteCategoryAction(
   formData: FormData,
-  context: AppLoadContext
+  context: AppLoadContext,
 ) {
   const data = z
     .object({ id: z.string().transform((arg) => Number(arg)) })
@@ -74,19 +74,19 @@ export default function BankTransactions() {
   const fetcher = useFetcher();
 
   return (
-    <div className="max-w-xl flex flex-col gap-4">
+    <div className="flex max-w-xl flex-col gap-4">
       <Form method="POST" className="flex flex-col gap-4">
         <input hidden readOnly name="intent" value="create" />
         <h2 className="text-lg">Create a new category</h2>
         <div>
           <label
-            className="block text-gray-700 text-sm font-bold mb-2"
+            className="mb-2 block text-sm font-bold text-gray-700"
             htmlFor="name"
           >
             Category name
           </label>
           <input
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            className="focus:shadow-outline w-full appearance-none rounded border px-3 py-2 leading-tight text-gray-700 shadow focus:outline-none"
             type="text"
             name="name"
             placeholder="Category name"

@@ -44,8 +44,8 @@ export async function action({ request, context }: ActionFunctionArgs) {
     accounts.flatMap(({ accountId, bankId }) =>
       goCardlessApi
         .getAccountTransactions(accountId, fromDate)
-        .then((res) => ({ ...res.transactions, bankId, accountId }))
-    )
+        .then((res) => ({ ...res.transactions, bankId, accountId })),
+    ),
   );
 
   const transformedTransactions: NewTransaction[] = remoteTransactions.flatMap(
@@ -57,7 +57,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
           userId: user.id,
           accountId,
           bankId,
-        })
+        }),
       );
 
       const bookedTransactions = booked.flatMap((it) =>
@@ -67,10 +67,10 @@ export async function action({ request, context }: ActionFunctionArgs) {
           userId: user.id,
           accountId,
           bankId,
-        })
+        }),
       );
       return [...pendingTransactions, ...bookedTransactions];
-    }
+    },
   );
 
   let savedTransactions: Transaction[] = [];
@@ -82,7 +82,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
         : start + limit;
 
     const slicedResults = await dbApi.saveTransactions(
-      transformedTransactions.slice(start, end)
+      transformedTransactions.slice(start, end),
     );
 
     savedTransactions = [...savedTransactions, ...slicedResults];
@@ -99,7 +99,7 @@ export default function Transactions() {
 
   return (
     <div>
-      <div className="flex justify-between items-end mb-4">
+      <div className="mb-4 flex items-end justify-between">
         <h1 className="text-xl">Transactions</h1>
         <Form method="POST">
           {lastSavedTransactionDate && (
@@ -119,7 +119,7 @@ export default function Transactions() {
           return (
             <li
               key={it.transactionId}
-              className="flex justify-between items-end border border-slate-100 p-4"
+              className="flex items-end justify-between border border-slate-100 p-4"
             >
               <div className="flex flex-col">
                 {date && <small>{formatDate(date)}</small>}

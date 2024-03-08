@@ -16,7 +16,7 @@ export async function action(args: ActionFunctionArgs) {
   if (!user) {
     fSession.flash(
       "error",
-      "Uh oh! Login failed. Please check your email and password and try again."
+      "Uh oh! Login failed. Please check your email and password and try again.",
     );
 
     return redirect("/auth/login", {

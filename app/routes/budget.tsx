@@ -183,7 +183,7 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
 
   transactions.forEach((transaction) => {
     const matchingCategory = categories.find(
-      (category) => category.id === transaction.categoryId
+      (category) => category.id === transaction.categoryId,
     );
 
     if (matchingCategory) {
@@ -195,7 +195,7 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
 
   const categoriesWithTransactions = categories.map((category) => {
     const categoryTransactions = categorizedTransactions.filter(
-      (transaction) => transaction.categoryId === category.id
+      (transaction) => transaction.categoryId === category.id,
     );
     return {
       ...category,
@@ -255,22 +255,22 @@ type ClientTransaction = SerializeFrom<Transaction>;
 function Category({ category }: { category: ClientCategory }) {
   const spent = category.transactions.reduce(
     (acc, transaction) => acc + transaction.amount,
-    0
+    0,
   );
 
   return (
     <div>
-      <div className="flex w-full justify-between bold text-lg">
+      <div className="bold flex w-full justify-between text-lg">
         <h3>{category.name}</h3>
         <p>{category.budgeted} budgeted</p>
         <p>{spent} spent</p>
       </div>
-      <ul className="px-8 space-y-4">
+      <ul className="space-y-4 px-8">
         {category.transactions.map((transaction) => {
           return (
             <li
               key={transaction.id}
-              className="w-full flex gap-2 justify-between items-end"
+              className="flex w-full items-end justify-between gap-2"
             >
               <Transaction transaction={transaction} />
             </li>
