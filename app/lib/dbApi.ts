@@ -198,6 +198,10 @@ export class DbApi {
             currency: sql`excluded.currency`,
             creditorName: sql`excluded.creditor_name`,
             debtorName: sql`excluded.debtor_name`,
+            additionalInformation: sql`excluded.additional_information`,
+            debtorBban: sql`excluded.debtor_bban`,
+            creditorBban: sql`excluded.creditor_bban`,
+            exchangeRate: sql`excluded.exchange_rate`,
           } satisfies Record<
             keyof Omit<Transaction, "transactionId" | "accountId" | "userId">,
             SQL<Transaction>

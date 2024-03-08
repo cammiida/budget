@@ -165,8 +165,15 @@ export const transaction = sqliteTable(
 
     amount: text("amount").notNull(),
     currency: text("currency").notNull(),
+    exchangeRate: text("exchange_rate"),
+
     creditorName: text("creditor_name"),
+    creditorBban: text("creditor_bban"),
+
     debtorName: text("debtor_name"),
+    debtorBban: text("debtor_bban"),
+
+    additionalInformation: text("additional_information"),
   },
   (transaction) => ({
     accountReference: foreignKey({

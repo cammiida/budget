@@ -56,10 +56,14 @@ function remoteToInternalTransaction({
     creditorName: remote.creditorName ?? null,
     debtorName: remote.debtorName ?? null,
     categoryId: null,
+    additionalInformation: remote.additionalInformation ?? null,
+    debtorBban: remote.debtorAccount?.bban ?? null,
+    creditorBban: remote.creditorAccount?.bban ?? null,
+    exchangeRate: remote.currencyExchange?.[0]?.exchangeRate ?? null,
   };
 }
 
-export async function action({ request, context }: ActionFunctionArgs) {
+export async function action({ context }: ActionFunctionArgs) {
   const dbApi = DbApi.create({ context });
 
   const user = context.user;
