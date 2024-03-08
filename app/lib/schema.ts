@@ -58,6 +58,7 @@ export const bankRelations = relations(bank, ({ one, many }) => ({
     references: [user.id],
   }),
   accounts: many(account),
+  transactions: many(transaction),
 }));
 
 export type Bank = InferSelectModel<typeof bank>;
@@ -192,6 +193,10 @@ export const transaction = sqliteTable(
 );
 
 export const transactionRelations = relations(transaction, ({ one }) => ({
+  bank: one(bank, {
+    fields: [transaction.userId, transaction.bankId],
+    references: [bank.userId, bank.bankId],
+  }),
   account: one(account, {
     fields: [transaction.userId, transaction.bankId, transaction.accountId],
     references: [account.userId, account.bankId, account.accountId],

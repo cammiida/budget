@@ -1,28 +1,61 @@
 import {
   ActionFunctionArgs,
   LoaderFunctionArgs,
+  SerializeFrom,
   json,
   redirect,
 } from "@remix-run/cloudflare";
-import { Form, useLoaderData, useNavigation } from "@remix-run/react";
+import {
+  Form,
+  useFetcher,
+  useLoaderData,
+  useNavigation,
+} from "@remix-run/react";
+import { eq } from "drizzle-orm";
+import { route } from "routes-gen";
 import { z } from "zod";
 import { Button } from "~/components/ui/button";
+import { getDbFromContext } from "~/lib/db.service.server";
 import { DbApi } from "~/lib/dbApi";
 import { GoCardlessApi } from "~/lib/gocardless-api.server";
-import { NewTransaction, Transaction } from "~/lib/schema";
+import {
+  NewTransaction,
+  Transaction,
+  category,
+  transaction as transactionTable,
+} from "~/lib/schema";
 import { formatDate, remoteToInternalTransaction } from "~/lib/utils";
 
 export async function loader({ context }: LoaderFunctionArgs) {
   const dbApi = DbApi.create({ context });
+  const userId = context.user?.id;
 
-  const transactions = await dbApi.getTransactions();
+  if (!userId) {
+    return redirect("/auth/login", { status: 401 });
+  }
+
+  const db = getDbFromContext(context);
+  const transactions = await db.query.transaction.findMany({
+    where: eq(transactionTable.userId, userId),
+    with: { account: true, bank: true, category: true },
+  });
+
+  const categories = await db.query.category.findMany({
+    columns: { name: true, id: true },
+    where: eq(category.userId, userId),
+  });
+
   const lastSavedTransactionDate = (
     await dbApi.getLatestTransactionDate()
   )?.date
     ?.toISOString()
     .split("T")[0];
 
-  return json({ transactions, lastSavedTransactionDate });
+  return json({
+    transactions,
+    lastSavedTransactionDate,
+    categories,
+  });
 }
 
 export async function action({ request, context }: ActionFunctionArgs) {
@@ -92,7 +125,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
 }
 
 export default function Transactions() {
-  const { transactions, lastSavedTransactionDate } =
+  const { transactions, lastSavedTransactionDate, categories } =
     useLoaderData<typeof loader>();
   const navigation = useNavigation();
   const isNavigating = navigation.state !== "idle";
@@ -113,25 +146,83 @@ export default function Transactions() {
           <Button disabled={isNavigating}>Sync transactions</Button>
         </Form>
       </div>
-      <ul className="shadow-lg">
+      <table className="w-full shadow-lg">
+        <tr>
+          <th className="rounded-tl-md bg-slate-100 p-4 text-left">Bank</th>
+          <th className="bg-slate-100 p-4 text-left">Account</th>
+          <th className="bg-slate-100 p-4 text-left">Details</th>
+          <th className="bg-slate-100 p-4 text-left">Amount</th>
+          <th className="rounded-tr-md bg-slate-100 p-4 text-left">Category</th>
+        </tr>
         {transactions.map((it) => {
-          const date = it.valueDate ?? it.bookingDate;
-          return (
-            <li
-              key={it.transactionId}
-              className="flex items-end justify-between border border-slate-100 p-4"
-            >
-              <div className="flex flex-col">
-                {date && <small>{formatDate(date)}</small>}
-                {it.additionalInformation}
-              </div>
-              <div>
-                {it.amount} {it.currency}
-              </div>
-            </li>
-          );
+          return <TransactionRow key={it.transactionId} transaction={it} />;
         })}
-      </ul>
+      </table>
     </div>
+  );
+}
+
+type ClientTransaction = SerializeFrom<typeof loader>["transactions"][0];
+
+function TransactionRow({
+  transaction: aggregatedTrans,
+}: {
+  transaction: ClientTransaction;
+}) {
+  const { bank, account, category, ...transaction } = aggregatedTrans;
+  const { categories } = useLoaderData<typeof loader>();
+  const fetcher = useFetcher();
+
+  const date = transaction.valueDate ?? transaction.bookingDate;
+
+  return (
+    <tr className="border border-slate-100">
+      <td className="p-4">
+        <img
+          className="h-8 w-8 rounded-full"
+          src={bank.logo ?? undefined}
+          alt={bank.name}
+        />
+        {bank.name}
+      </td>
+      <td className="p-4">{account.bban}</td>
+      <td className="p-4">
+        {date && <small>{formatDate(date)}</small>}
+        <br />
+        {transaction.additionalInformation}
+      </td>
+      <td className="p-4">
+        {transaction.amount} {transaction.currency}
+      </td>
+      <td className="p-4">
+        <fetcher.Form
+          method="POST"
+          action={route("/api/set-transaction-category")}
+        >
+          <input
+            type="hidden"
+            name="transactionId"
+            value={transaction.transactionId}
+          />
+          <select
+            name="categoryId"
+            defaultValue={category?.id}
+            onChange={(event) => {
+              return fetcher.submit(event.currentTarget.form, {
+                method: "POST",
+                action: route("/api/set-transaction-category"),
+              });
+            }}
+          >
+            <option value="">Select category</option>
+            {categories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </select>
+        </fetcher.Form>
+      </td>
+    </tr>
   );
 }
