@@ -160,8 +160,8 @@ export const transaction = sqliteTable(
       onDelete: "set null",
     }),
     status: text("status").$type<"booked" | "pending">().notNull(),
-    bookingDateTime: timestamp("booking_date_time"),
-    valueDateTime: timestamp("value_date_time"),
+    bookingDate: timestamp("booking_date"),
+    valueDate: timestamp("value_date"),
 
     amount: text("amount").notNull(),
     currency: text("currency").notNull(),

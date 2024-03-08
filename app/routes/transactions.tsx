@@ -6,7 +6,6 @@ import {
 } from "@remix-run/cloudflare";
 import { Form, useLoaderData, useNavigation } from "@remix-run/react";
 import { eq } from "drizzle-orm";
-import { TransactionSchema } from "generated-sources/gocardless";
 import { Button } from "~/components/ui/button";
 import { getDbFromContext } from "~/lib/db.service.server";
 import { DbApi } from "~/lib/dbApi";
@@ -16,6 +15,7 @@ import {
   Transaction,
   account as accountTable,
 } from "~/lib/schema";
+import { formatDate, remoteToInternalTransaction } from "~/lib/utils";
 
 export async function loader({ context }: LoaderFunctionArgs) {
   const dbApi = DbApi.create({ context });
@@ -23,44 +23,6 @@ export async function loader({ context }: LoaderFunctionArgs) {
   const transactions = await dbApi.getTransactions();
 
   return json({ transactions });
-}
-
-function remoteToInternalTransaction({
-  remote,
-  status,
-  userId,
-  accountId,
-  bankId,
-}: {
-  remote: TransactionSchema;
-  status: "booked" | "pending";
-  userId: number;
-  accountId: string;
-  bankId: string;
-}): Transaction {
-  return {
-    userId,
-    bankId,
-    transactionId:
-      remote.transactionId ??
-      remote.internalTransactionId ??
-      `${accountId} - ${userId}`,
-    status,
-    accountId,
-    amount: remote.transactionAmount.amount,
-    currency: remote.transactionAmount.currency,
-    bookingDateTime: remote.bookingDateTime
-      ? new Date(remote.bookingDateTime)
-      : null,
-    valueDateTime: remote.valueDateTime ? new Date(remote.valueDateTime) : null,
-    creditorName: remote.creditorName ?? null,
-    debtorName: remote.debtorName ?? null,
-    categoryId: null,
-    additionalInformation: remote.additionalInformation ?? null,
-    debtorBban: remote.debtorAccount?.bban ?? null,
-    creditorBban: remote.creditorAccount?.bban ?? null,
-    exchangeRate: remote.currencyExchange?.[0]?.exchangeRate ?? null,
-  };
 }
 
 export async function action({ context }: ActionFunctionArgs) {
@@ -140,17 +102,23 @@ export default function Transactions() {
       </Form>
       <h1>Transactions</h1>
       <ul>
-        {transactions.map((it) => (
-          <li key={it.transactionId}>
-            {Object.entries(it).map(([key, value]) => (
-              <span key={key}>
-                {key}: {value?.toString()} <br />
-              </span>
-            ))}
-            {it.amount}
-            {it.currency}
-          </li>
-        ))}
+        {transactions.map((it) => {
+          const date = it.valueDate ?? it.bookingDate;
+          return (
+            <li
+              key={it.transactionId}
+              className="flex justify-between items-end border border-slate-100 p-4"
+            >
+              <div className="flex flex-col">
+                {date && <small>{formatDate(date)}</small>}
+                {it.additionalInformation}
+              </div>
+              <div>
+                {it.amount} {it.currency}
+              </div>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

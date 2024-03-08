@@ -43,6 +43,13 @@
       "when": 1709889238599,
       "tag": "0005_unknown_captain_flint",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1709891350884,
+      "tag": "0006_rapid_zodiak",
+      "breakpoints": true
     }
   ]
 }
