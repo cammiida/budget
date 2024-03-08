@@ -2,6 +2,7 @@ import { AppLoadContext, redirect } from "@remix-run/cloudflare";
 import {
   AccountsService,
   ApiError,
+  BankTransactionStatusSchema,
   InstitutionsService,
   OpenAPI,
   RequisitionRequest,
@@ -97,7 +98,12 @@ export class GoCardlessApi {
     return AccountsService.retrieveAccountDetails(accountId);
   }
 
+  // wrong type definition in the generated sources
   async getAccountTransactions(accountId: string) {
-    return AccountsService.retrieveAccountTransactions(accountId);
+    return (await AccountsService.retrieveAccountTransactions(
+      accountId
+    )) as unknown as {
+      transactions: BankTransactionStatusSchema;
+    };
   }
 }

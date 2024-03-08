@@ -35,7 +35,6 @@ export async function action({ context, request }: ActionFunctionArgs) {
   try {
     // get or add bank
     const bank = await dbApi.getBank(bankId);
-    console.log("bank", bank);
 
     // get existing requisition
     const goCardlessApi = GoCardlessApi.create({ context });

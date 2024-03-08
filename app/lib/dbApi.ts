@@ -1,5 +1,5 @@
 import { AppLoadContext } from "@remix-run/cloudflare";
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { SQL, and, eq, inArray, sql } from "drizzle-orm";
 import { DrizzleD1Database } from "drizzle-orm/d1";
 import { getDbFromContext } from "./db.service.server";
 import * as schema from "./schema";
@@ -9,10 +9,13 @@ import {
   NewAccount,
   NewBank,
   NewCategory,
+  NewTransaction,
+  Transaction,
   User,
   account,
   bank as bankTable,
   category,
+  transaction as transactionTable,
   user,
 } from "./schema";
 
@@ -163,5 +166,50 @@ export class DbApi {
       .where(and(eq(category.id, id), eq(category.userId, currentUser.id)))
       .returning()
       .get();
+  }
+
+  async getTransactions() {
+    const currentUser = this.getCurrentUser();
+
+    return this.db.query.transaction.findMany({
+      where: eq(transactionTable.userId, currentUser.id),
+      with: { category: true, account: true },
+    });
+  }
+
+  async saveTransactions(transactions: NewTransaction[]) {
+    try {
+      return await this.db
+        .insert(transactionTable)
+        .values(transactions)
+        .onConflictDoUpdate({
+          target: [
+            transactionTable.transactionId,
+            transactionTable.accountId,
+            transactionTable.userId,
+          ],
+          set: {
+            bankId: sql`excluded.bank_id`,
+            categoryId: sql`excluded.category_id`,
+            status: sql`excluded.status`,
+            bookingDateTime: sql`excluded.booking_date_time`,
+            valueDateTime: sql`excluded.value_date_time`,
+            amount: sql`excluded.amount`,
+            currency: sql`excluded.currency`,
+            creditorName: sql`excluded.creditor_name`,
+            debtorName: sql`excluded.debtor_name`,
+          } satisfies Record<
+            keyof Omit<Transaction, "transactionId" | "accountId" | "userId">,
+            SQL<Transaction>
+          >,
+        })
+        .returning();
+    } catch (error) {
+      console.error(error);
+      throw new Response("Unable to save transactions", {
+        status: 500,
+        statusText: JSON.stringify(error),
+      });
+    }
   }
 }

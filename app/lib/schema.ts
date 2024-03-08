@@ -1,5 +1,6 @@
 import { InferInsertModel, InferSelectModel, relations } from "drizzle-orm";
 import {
+  customType,
   foreignKey,
   integer,
   primaryKey,
@@ -28,6 +29,7 @@ export const userRelations = relations(user, ({ many }) => ({
   banks: many(bank),
   accounts: many(account),
   categories: many(category),
+  transactions: many(transaction),
 }));
 
 export type User = InferSelectModel<typeof user>;
@@ -87,7 +89,7 @@ export const account = sqliteTable(
   })
 );
 
-export const accountRelations = relations(account, ({ one }) => ({
+export const accountRelations = relations(account, ({ one, many }) => ({
   bank: one(bank, {
     fields: [account.userId, account.bankId],
     references: [bank.userId, bank.bankId],
@@ -96,6 +98,7 @@ export const accountRelations = relations(account, ({ one }) => ({
     fields: [account.userId],
     references: [user.id],
   }),
+  transactions: many(transaction),
 }));
 
 export type Account = InferSelectModel<typeof account>;
@@ -116,14 +119,84 @@ export const category = sqliteTable(
   })
 );
 
-export const categoryRelations = relations(category, ({ one }) => ({
+export const categoryRelations = relations(category, ({ one, many }) => ({
   user: one(user, {
     fields: [category.userId],
     references: [user.id],
   }),
+  transactions: many(transaction),
 }));
 
 export type Category = InferSelectModel<typeof category>;
 export type NewCategory = InferInsertModel<typeof category>;
 
 export const createCategory = createInsertSchema(category);
+
+const timestamp = customType<{
+  data: Date;
+  driverData: string;
+}>({
+  dataType() {
+    return "timestamp";
+  },
+  fromDriver(value: string): Date {
+    return new Date(value);
+  },
+  toDriver(value: Date): string {
+    return value.toISOString();
+  },
+});
+
+export const transaction = sqliteTable(
+  "transaction",
+  {
+    transactionId: text("transaction_id").notNull(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    bankId: text("bank_id").notNull(),
+    accountId: text("account_id").notNull(),
+    categoryId: text("category_id").references(() => category.id, {
+      onDelete: "set null",
+    }),
+    status: text("status").$type<"booked" | "pending">().notNull(),
+    bookingDateTime: timestamp("booking_date_time"),
+    valueDateTime: timestamp("value_date_time"),
+
+    amount: text("amount").notNull(),
+    currency: text("currency").notNull(),
+    creditorName: text("creditor_name"),
+    debtorName: text("debtor_name"),
+  },
+  (transaction) => ({
+    accountReference: foreignKey({
+      columns: [transaction.userId, transaction.bankId, transaction.accountId],
+      foreignColumns: [account.userId, account.bankId, account.accountId],
+    }).onDelete("cascade"),
+    pk: primaryKey({
+      columns: [
+        transaction.transactionId,
+        transaction.accountId,
+        transaction.userId,
+      ],
+    }),
+  })
+);
+
+export const transactionRelations = relations(transaction, ({ one }) => ({
+  account: one(account, {
+    fields: [transaction.userId, transaction.bankId, transaction.accountId],
+    references: [account.userId, account.bankId, account.accountId],
+  }),
+  category: one(category, {
+    fields: [transaction.categoryId, transaction.userId],
+    references: [category.id, category.userId],
+  }),
+  user: one(user, {
+    fields: [transaction.userId],
+    references: [user.id],
+  }),
+}));
+
+export type Transaction = InferSelectModel<typeof transaction>;
+export type NewTransaction = InferInsertModel<typeof transaction>;
