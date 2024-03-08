@@ -7,6 +7,8 @@ import {
   redirect,
 } from "@remix-run/cloudflare";
 import { Form, useLoaderData } from "@remix-run/react";
+import { and, eq } from "drizzle-orm";
+import { useState } from "react";
 import { route } from "routes-gen";
 import { z } from "zod";
 import { Button } from "~/components/ui/button";
@@ -71,15 +73,50 @@ async function deleteCategoryAction(
   }
 }
 
+async function updateCategoryAction(
+  formData: FormData,
+  context: AppLoadContext,
+) {
+  const data = z
+    .object({
+      id: z.string().transform((arg) => Number(arg)),
+      keywords: z.string().transform((arg) => arg.split(",")),
+    })
+    .parse(Object.fromEntries(formData));
+
+  const userId = context.user?.id;
+  if (!userId) {
+    return redirect(route("/auth/login"));
+  }
+
+  const db = getDbFromContext(context);
+  await db
+    .update(category)
+    .set({ keywords: data.keywords })
+    .where(and(eq(category.id, data.id), eq(category.userId, userId)));
+
+  return json({ success: true });
+}
+
 export async function action({ request, context }: ActionFunctionArgs) {
   const formData = await request.formData();
   const data = z
-    .object({ intent: z.literal("create").or(z.literal("delete")) })
+    .object({
+      intent: z
+        .literal("create")
+        .or(z.literal("delete"))
+        .or(z.literal("update")),
+    })
     .parse(Object.fromEntries(formData));
 
-  return data.intent === "create"
-    ? createCategoryAction(formData, context)
-    : deleteCategoryAction(formData, context);
+  switch (data.intent) {
+    case "create":
+      return createCategoryAction(formData, context);
+    case "delete":
+      return deleteCategoryAction(formData, context);
+    case "update":
+      return updateCategoryAction(formData, context);
+  }
 }
 
 export default function Categories() {
@@ -132,11 +169,27 @@ export default function Categories() {
 type ClientCategory = SerializeFrom<typeof loader>["categories"][0];
 
 function CategoryRow({ category }: { category: ClientCategory }) {
+  const [keywordsInputValue, setKeywordsInputValue] = useState(
+    category.keywords?.join(", "),
+  );
+  const hasChanged = keywordsInputValue !== category.keywords?.join(", ");
+
   return (
     <tr key={category.id} className="border border-slate-100">
       <td className="p-4">{category.name}</td>
-      <td className="p-4">{category.keywords?.join(", ")}</td>
       <td className="p-4">
+        <input
+          value={keywordsInputValue}
+          onChange={(e) => setKeywordsInputValue(e.currentTarget.value)}
+        />
+      </td>
+      <td className="p-4">
+        <Form method="POST">
+          <input hidden readOnly name="intent" value="update" />
+          <input hidden readOnly name="id" value={category.id} />
+          <input hidden readOnly name="keywords" value={keywordsInputValue} />
+          <Button disabled={!hasChanged}>Save</Button>
+        </Form>
         <Form method="POST">
           <input hidden readOnly name="intent" value="delete" />
           <input hidden readOnly name="id" value={category.id} />

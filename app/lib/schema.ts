@@ -167,7 +167,7 @@ export const transaction = sqliteTable(
       .references(() => user.id, { onDelete: "cascade" }),
     bankId: text("bank_id").notNull(),
     accountId: text("account_id").notNull(),
-    categoryId: text("category_id").references(() => category.id, {
+    categoryId: integer("category_id").references(() => category.id, {
       onDelete: "set null",
     }),
     status: text("status").$type<"booked" | "pending">().notNull(),

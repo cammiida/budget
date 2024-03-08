@@ -9,7 +9,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
   const formData = await request.formData();
   const categoryId = z
     .string()
-    .transform((arg) => (arg === "" ? null : arg))
+    .transform((arg) => (arg === "" ? null : Number(arg)))
     .parse(formData.get("categoryId"));
   const trasactionId = z.string().parse(formData.get("transactionId"));
 

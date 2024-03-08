@@ -12,6 +12,7 @@ import {
   useNavigation,
 } from "@remix-run/react";
 import { desc, eq } from "drizzle-orm";
+import { useState } from "react";
 import { route } from "routes-gen";
 import { z } from "zod";
 import { Button } from "~/components/ui/button";
@@ -49,12 +50,12 @@ export async function loader({ context }: LoaderFunctionArgs) {
     with: {
       account: { columns: { bban: true, accountId: true, name: true } },
       bank: { columns: { logo: true, name: true } },
-      category: { columns: { id: true, name: true } },
+      category: { columns: { id: true, name: true, keywords: true } },
     },
   });
 
   const categories = await db.query.category.findMany({
-    columns: { name: true, id: true },
+    columns: { name: true, id: true, keywords: true },
     where: eq(category.userId, userId),
   });
 
@@ -142,33 +143,92 @@ export default function Transactions() {
     useLoaderData<typeof loader>();
   const navigation = useNavigation();
   const isNavigating = navigation.state !== "idle";
+  const [isSuggestingCategories, setIsSuggestingCategories] = useState(false);
+
+  const fetcher = useFetcher();
+
+  function saveSuggestedCategories() {
+    const formData = new FormData();
+    formData.set("transactions", JSON.stringify(selectedTransactions));
+    fetcher.submit(formData, {
+      method: "POST",
+      action: route("/api/set-transactions-categories"),
+    });
+  }
+
+  const [selectedTransactions, setSelectedTransactions] = useState<
+    Pick<Transaction, "transactionId" | "categoryId">[]
+  >([]);
+
+  function toggleTransactionSelection(
+    transactionId: string,
+    categoryId: number,
+    action: "add" | "remove",
+  ) {
+    const filtered = selectedTransactions.filter(
+      (it) => it.transactionId !== transactionId,
+    );
+    if (action === "add") {
+      setSelectedTransactions([...filtered, { transactionId, categoryId }]);
+    }
+  }
 
   return (
     <div>
       <div className="mb-4 flex items-end justify-between">
         <h1 className="text-xl">Transactions</h1>
-        <Form method="POST">
-          {lastSavedTransactionDate && (
-            <input
-              readOnly
-              type="hidden"
-              name="fromDate"
-              value={lastSavedTransactionDate}
-            />
+        <div className="flex gap-2">
+          {!isSuggestingCategories && (
+            <Button onClick={() => setIsSuggestingCategories(true)}>
+              Suggest categories
+            </Button>
           )}
-          <Button disabled={isNavigating}>Sync transactions</Button>
-        </Form>
+          {isSuggestingCategories && (
+            <>
+              <Button onClick={saveSuggestedCategories}>Save</Button>
+              <Button onClick={() => setIsSuggestingCategories(false)}>
+                Cancel
+              </Button>
+            </>
+          )}
+          <Form method="POST">
+            {lastSavedTransactionDate && (
+              <input
+                readOnly
+                type="hidden"
+                name="fromDate"
+                value={lastSavedTransactionDate}
+              />
+            )}
+            <Button disabled={isNavigating}>Sync transactions</Button>
+          </Form>
+        </div>
       </div>
       <table className="w-full shadow-lg">
         <tr>
+          {isSuggestingCategories && (
+            <th className="rounded-tr-md bg-slate-100 p-4 text-left"></th>
+          )}
           <th className="rounded-tl-md bg-slate-100 p-4 text-left">Bank</th>
           <th className="bg-slate-100 p-4 text-left">Account</th>
           <th className="bg-slate-100 p-4 text-left">Details</th>
           <th className="bg-slate-100 p-4 text-left">Amount</th>
           <th className="rounded-tr-md bg-slate-100 p-4 text-left">Category</th>
+          {isSuggestingCategories && (
+            <th className="rounded-tr-md bg-slate-100 p-4 text-left">
+              Suggested category
+            </th>
+          )}
         </tr>
         {transactions.map((it) => {
-          return <TransactionRow key={it.transactionId} transaction={it} />;
+          return (
+            <TransactionRow
+              key={it.transactionId}
+              transaction={it}
+              isSuggestingCategories={isSuggestingCategories}
+              toggleTransactionSelection={toggleTransactionSelection}
+            />
+          );
         })}
       </table>
     </div>
@@ -179,17 +239,48 @@ type ClientTransaction = SerializeFrom<typeof loader>["transactions"][0];
 
 function TransactionRow({
   transaction: aggregatedTrans,
+  isSuggestingCategories = false,
+  toggleTransactionSelection,
 }: {
   transaction: ClientTransaction;
+  isSuggestingCategories?: boolean;
+  toggleTransactionSelection: (
+    transactionId: string,
+    categoryId: number,
+    action: "add" | "remove",
+  ) => void;
 }) {
   const { bank, account, category, ...transaction } = aggregatedTrans;
   const { categories } = useLoaderData<typeof loader>();
   const fetcher = useFetcher();
 
   const date = transaction.valueDate ?? transaction.bookingDate;
+  const suggestedCategory = categories.find((it) =>
+    it.keywords?.some((keyword) =>
+      transaction.additionalInformation
+        ?.toLocaleLowerCase()
+        .includes(keyword.toLocaleLowerCase()),
+    ),
+  );
 
   return (
     <tr className="border border-slate-100">
+      {isSuggestingCategories && (
+        <DataCell>
+          <input
+            type="checkbox"
+            disabled={!suggestedCategory}
+            onChange={(e) =>
+              suggestedCategory &&
+              toggleTransactionSelection(
+                transaction.transactionId,
+                suggestedCategory.id,
+                e.currentTarget.checked ? "add" : "remove",
+              )
+            }
+          />
+        </DataCell>
+      )}
       <DataCell>
         <img
           className="h-8 w-8 rounded-full"
@@ -240,6 +331,9 @@ function TransactionRow({
           </select>
         </fetcher.Form>
       </DataCell>
+      {isSuggestingCategories && (
+        <DataCell>{suggestedCategory?.name ?? "No suggestion"}</DataCell>
+      )}
     </tr>
   );
 }
