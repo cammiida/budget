@@ -5,6 +5,7 @@ import {
   redirect,
 } from "@remix-run/cloudflare";
 import { Form, Link, useFetcher, useLoaderData } from "@remix-run/react";
+import { route } from "routes-gen";
 import { requireLogin } from "~/lib/auth.server";
 import { DbApi } from "~/lib/dbApi";
 import { GoCardlessApi } from "~/lib/gocardless-api.server";
@@ -79,7 +80,7 @@ function Banks() {
   const { allBanks: banks, chosenBanks } = useLoaderData<typeof loader>();
 
   return (
-    <div className="flex flex-col items-center max-w-lg gap-10 mx-auto">
+    <div className="mx-auto flex max-w-lg flex-col items-center gap-10">
       <div className="w-full">
         <h2 className="text-lg">Add a new bank</h2>
         <Form method="post">
@@ -93,7 +94,7 @@ function Banks() {
           <button type="submit">Submit</button>
         </Form>
       </div>
-      <div className="flex flex-col gap-4 w-full">
+      <div className="flex w-full flex-col gap-4">
         <h1 className="text-lg">Your banks</h1>
         {chosenBanks.map((it) => (
           <BankComponent bank={it} key={it.bankId} />
@@ -112,23 +113,23 @@ function BankComponent({ bank }: { bank: Bank }) {
   return (
     <div
       key={bank.bankId}
-      className="flex gap-2 bg-slate-50 p-5 rounded-md shadow-sm"
+      className="flex gap-2 rounded-md bg-slate-50 p-5 shadow-sm"
     >
       <Link
-        className="flex grow gap-2 items-center"
-        to={`/banks/${bank.bankId}`}
+        className="flex grow items-center gap-2"
+        to={route("/banks/:bankId", { bankId: bank.bankId })}
       >
         <img
-          className="w-8 h-8 rounded-full"
+          className="h-8 w-8 rounded-full"
           src={bank.logo ?? undefined}
           alt={bank.name}
         />
         <span>{bank.name}</span>
       </Link>
-      <fetcher.Form method="delete" action="/api/remove-bank">
+      <fetcher.Form method="delete" action={route("/api/remove-bank")}>
         <input type="hidden" name="bankId" value={bank.bankId} />
         <button
-          className="disabled:opacity-50 bg-red-500 text-white px-2 py-1 rounded-md"
+          className="rounded-md bg-red-500 px-2 py-1 text-white disabled:opacity-50"
           type="submit"
           disabled={isDeleting}
         >

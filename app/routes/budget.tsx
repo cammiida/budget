@@ -1,9 +1,4 @@
-import {
-  LoaderFunctionArgs,
-  SerializeFrom,
-  json,
-  redirect,
-} from "@remix-run/cloudflare";
+import { LoaderFunctionArgs, SerializeFrom, json } from "@remix-run/cloudflare";
 import { useLoaderData } from "@remix-run/react";
 import { CurrencyExchangeSchema } from "generated-sources/gocardless";
 
@@ -202,10 +197,6 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
       transactions: categoryTransactions,
     };
   });
-
-  if (!context.user) {
-    throw redirect("/auth/login?returnTo=/budget");
-  }
 
   return json({
     budget: budget,

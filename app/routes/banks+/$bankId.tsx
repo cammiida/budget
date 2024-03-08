@@ -1,5 +1,6 @@
 import { LoaderFunctionArgs, json } from "@remix-run/cloudflare";
 import { Outlet, useFetcher, useLoaderData, useParams } from "@remix-run/react";
+import { route } from "routes-gen";
 import { Button } from "~/components/ui/button";
 import { DbApi } from "~/lib/dbApi";
 
@@ -27,26 +28,26 @@ export default function Bank() {
   const fetcher = useFetcher();
 
   return (
-    <div className="flex flex-col gap-4 items-center">
-      <fetcher.Form method="POST" action="/api/sync-accounts">
+    <div className="flex flex-col items-center gap-4">
+      <fetcher.Form method="POST" action={route("/api/sync-accounts")}>
         <input type="hidden" name="bankId" value={params.bankId} />
         <Button type="submit" disabled={fetcher.state !== "idle"}>
           Sync accounts
         </Button>
       </fetcher.Form>
       <h1 className="text-xl">{bank?.name}</h1>
-      <ul className="flex flex-col gap-4 max-w-lg min-w-[400px]">
+      <ul className="flex min-w-[400px] max-w-lg flex-col gap-4">
         {accounts.map((account) => {
           const balance = account.balances.find(
-            (balance) => balance.balanceType === "interimAvailable"
+            (balance) => balance.balanceType === "interimAvailable",
           );
 
           return (
             <li
               key={account.accountId}
-              className="flex flex-col gap-1 min-w-full shadow-lg p-4 rounded-md cursor-pointer bg-slate-100"
+              className="flex min-w-full cursor-pointer flex-col gap-1 rounded-md bg-slate-100 p-4 shadow-lg"
             >
-              <div className="w-full flex justify-between">
+              <div className="flex w-full justify-between">
                 <h2 className="text-lg">
                   {/* splits on last , */}
                   {account.name?.split(/\,(?=[^\,]+$)/)[0]}

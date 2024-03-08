@@ -1,6 +1,26 @@
 import { Form, Link } from "@remix-run/react";
 import { useState } from "react";
+import { RouteParams, route } from "routes-gen";
 import { useRootData } from "~/root";
+
+const ROUTES: { name: string; route: keyof RouteParams }[] = [
+  {
+    name: "Budget",
+    route: route("/budget"),
+  },
+  {
+    name: "Banks",
+    route: route("/banks"),
+  },
+  {
+    name: "Transactions",
+    route: route("/transactions"),
+  },
+  {
+    name: "Categories",
+    route: route("/categories"),
+  },
+];
 
 export function Navbar() {
   const rootData = useRootData();
@@ -23,7 +43,7 @@ export function Navbar() {
     <nav className="border-gray-200 bg-white dark:bg-gray-900">
       <div className="mx-auto flex max-w-screen-xl flex-wrap items-center justify-between p-4">
         <Link
-          to="/"
+          to={route("/")}
           className="flex items-center space-x-3 rtl:space-x-reverse"
         >
           <span className="self-center whitespace-nowrap text-2xl font-semibold dark:text-white">
@@ -59,24 +79,18 @@ export function Navbar() {
               </span>
             </div>
             <ul className="py-2" aria-labelledby="user-menu-button">
+              {ROUTES.map((it) => (
+                <li key={it.route}>
+                  <Link
+                    to={it.route}
+                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600 dark:hover:text-white"
+                  >
+                    {it.name}
+                  </Link>
+                </li>
+              ))}
               <li>
-                <Link
-                  to="/dashboard"
-                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600 dark:hover:text-white"
-                >
-                  Dashboard
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/settings"
-                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600 dark:hover:text-white"
-                >
-                  Settings
-                </Link>
-              </li>
-              <li>
-                <Form method="post" action="/auth/logout">
+                <Form method="post" action={route("/auth/logout")}>
                   <button
                     type="submit"
                     className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600 dark:hover:text-white"
@@ -120,22 +134,16 @@ export function Navbar() {
           id="navbar-user"
         >
           <ul className="mt-4 flex flex-col rounded-lg border border-gray-100 bg-gray-50 p-4 font-medium dark:border-gray-700 dark:bg-gray-800 md:mt-0 md:flex-row md:space-x-8 md:border-0 md:bg-white md:p-0 md:dark:bg-gray-900 rtl:space-x-reverse">
-            <li>
-              <Link
-                to="/budget"
-                className="block rounded px-3 py-2 text-gray-900 hover:bg-gray-100 dark:border-gray-700 dark:text-white dark:hover:bg-gray-700 dark:hover:text-white md:p-0 md:hover:bg-transparent md:hover:text-blue-700 md:dark:hover:bg-transparent md:dark:hover:text-blue-500"
-              >
-                Budget
-              </Link>
-            </li>
-            <li>
-              <Link
-                to="/banks"
-                className="block rounded px-3 py-2 text-gray-900 hover:bg-gray-100 dark:border-gray-700 dark:text-white dark:hover:bg-gray-700 dark:hover:text-white md:p-0 md:hover:bg-transparent md:hover:text-blue-700 md:dark:hover:bg-transparent md:dark:hover:text-blue-500"
-              >
-                Banks
-              </Link>
-            </li>
+            {ROUTES.map((it) => (
+              <li key={it.route}>
+                <Link
+                  to={it.route}
+                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600 dark:hover:text-white"
+                >
+                  {it.name}
+                </Link>
+              </li>
+            ))}
           </ul>
         </div>
       </div>
