@@ -95,13 +95,16 @@ export default function Transactions() {
   const { transactions } = useLoaderData<typeof loader>();
   const navigation = useNavigation();
   const isNavigating = navigation.state !== "idle";
+
   return (
     <div>
-      <Form method="POST">
-        <Button disabled={isNavigating}>Sync transactions</Button>
-      </Form>
-      <h1>Transactions</h1>
-      <ul>
+      <div className="flex justify-between items-end mb-4">
+        <h1 className="text-xl">Transactions</h1>
+        <Form method="POST">
+          <Button disabled={isNavigating}>Sync transactions</Button>
+        </Form>
+      </div>
+      <ul className="shadow-lg">
         {transactions.map((it) => {
           const date = it.valueDate ?? it.bookingDate;
           return (
