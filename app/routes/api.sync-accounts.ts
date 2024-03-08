@@ -53,7 +53,8 @@ export async function action({ context, request }: ActionFunctionArgs) {
           name: accountDetails.account.name ?? `${bank?.name} - ${accountId}`,
           ownerName: accountDetails.account.ownerName ?? "Unknown",
           balances: accountBalances.balances ?? [],
-        } satisfies NewAccount;
+          bban: accountDetails.account.bban ?? null,
+        } satisfies Required<NewAccount>;
       },
     );
 

@@ -139,7 +139,15 @@ export class DbApi {
         .values(accounts)
         .onConflictDoUpdate({
           target: [account.userId, account.bankId, account.accountId],
-          set: { balances: sql`excluded.balances` },
+          set: {
+            balances: sql`excluded.balances`,
+            bban: sql`excluded.bban`,
+            name: sql`excluded.name`,
+            ownerName: sql`excluded.owner_name`,
+          } satisfies Record<
+            keyof Omit<Account, "userId" | "bankId" | "accountId">,
+            SQL<Transaction>
+          >,
         })
         .returning();
     } catch (error) {

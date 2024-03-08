@@ -22,7 +22,7 @@ export const user = sqliteTable(
   },
   (user) => ({
     emailIdx: uniqueIndex("emailIdx").on(user.email),
-  })
+  }),
 );
 
 export const userRelations = relations(user, ({ many }) => ({
@@ -49,7 +49,7 @@ export const bank = sqliteTable(
   },
   (bank) => ({
     pk: primaryKey({ columns: [bank.bankId, bank.userId] }),
-  })
+  }),
 );
 
 export const bankRelations = relations(bank, ({ one, many }) => ({
@@ -71,6 +71,7 @@ export const account = sqliteTable(
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
     bankId: text("bank_id").notNull(),
+    bban: text("bban"),
     name: text("name").notNull(),
     ownerName: text("owner_name"),
     balances: text("balances", { mode: "json" })
@@ -86,7 +87,7 @@ export const account = sqliteTable(
     pk: primaryKey({
       columns: [account.userId, account.bankId, account.accountId],
     }),
-  })
+  }),
 );
 
 export const accountRelations = relations(account, ({ one, many }) => ({
@@ -116,7 +117,7 @@ export const category = sqliteTable(
   },
   (category) => ({
     uniqueOne: uniqueIndex("unique_on").on(category.userId, category.name),
-  })
+  }),
 );
 
 export const categoryRelations = relations(category, ({ one, many }) => ({
@@ -187,7 +188,7 @@ export const transaction = sqliteTable(
         transaction.userId,
       ],
     }),
-  })
+  }),
 );
 
 export const transactionRelations = relations(transaction, ({ one }) => ({
