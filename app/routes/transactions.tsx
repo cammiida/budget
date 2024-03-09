@@ -275,7 +275,12 @@ export default function Transactions() {
               value={JSON.stringify(selectedTransactions)}
             />
             <input readOnly hidden name="intent" value="saveCategories" />
-            <Button type="submit" disabled={!selectedTransactions.length}>
+            <Button
+              type="submit"
+              disabled={
+                !selectedTransactions.filter((it) => it.selected).length
+              }
+            >
               Save
             </Button>
           </Form>
