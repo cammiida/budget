@@ -28,13 +28,28 @@ import {
 } from "~/lib/schema";
 import { formatDate, remoteToInternalTransaction } from "~/lib/utils";
 
-export async function loader({ context }: LoaderFunctionArgs) {
+const PAGE_SIZE = 10;
+
+export async function loader({ context, request }: LoaderFunctionArgs) {
   const dbApi = DbApi.create({ context });
   const userId = context.user?.id;
-
   if (!userId) {
     return redirect("/auth/login", { status: 401 });
   }
+
+  const searchParams = new URL(request.url).searchParams;
+  const page =
+    z
+      .string()
+      .transform((arg) => parseInt(arg))
+      .nullable()
+      .parse(searchParams.get("page")) ?? 1;
+
+  if (page < 1) {
+    searchParams.delete("page");
+    return redirect("/transactions" + searchParams.toString());
+  }
+
   const db = getDbFromContext(context);
 
   const allCategories = await db.query.category.findMany({
@@ -45,6 +60,8 @@ export async function loader({ context }: LoaderFunctionArgs) {
   const transactions = await db.query.transaction.findMany({
     where: eq(transactionTable.userId, userId),
     orderBy: desc(transactionTable.valueDate),
+    limit: PAGE_SIZE,
+    offset: (page - 1) * PAGE_SIZE,
     columns: {
       additionalInformation: true,
       amount: true,
