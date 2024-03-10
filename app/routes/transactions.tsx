@@ -11,9 +11,10 @@ import {
   useActionData,
   useLoaderData,
   useNavigation,
+  useSearchParams,
   useSubmit,
 } from "@remix-run/react";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { useState } from "react";
 import { z } from "zod";
 import { Button } from "~/components/ui/button";
@@ -30,6 +31,11 @@ import { formatDate, remoteToInternalTransaction } from "~/lib/utils";
 
 const PAGE_SIZE = 10;
 
+const pageSchema = z
+  .string()
+  .transform((arg) => parseInt(arg))
+  .nullable();
+
 export async function loader({ context, request }: LoaderFunctionArgs) {
   const dbApi = DbApi.create({ context });
   const userId = context.user?.id;
@@ -38,19 +44,24 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
   }
 
   const searchParams = new URL(request.url).searchParams;
-  const page =
-    z
-      .string()
-      .transform((arg) => parseInt(arg))
-      .nullable()
-      .parse(searchParams.get("page")) ?? 1;
+  const page = pageSchema.parse(searchParams.get("page")) ?? 1;
+
+  const db = getDbFromContext(context);
+  const [{ transactionCount }] = await db
+    .select({ transactionCount: sql<number>`count(*)` })
+    .from(transactionTable)
+    .where(eq(transactionTable.userId, userId));
+
+  const totalPages = Math.ceil(transactionCount / PAGE_SIZE);
+  const offset = (page - 1) * PAGE_SIZE;
 
   if (page < 1) {
     searchParams.delete("page");
-    return redirect("/transactions" + searchParams.toString());
+    return redirect("/transactions?" + searchParams.toString());
+  } else if (page > totalPages) {
+    searchParams.set("page", totalPages.toString());
+    return redirect("/transactions?" + searchParams.toString());
   }
-
-  const db = getDbFromContext(context);
 
   const allCategories = await db.query.category.findMany({
     columns: { name: true, id: true, keywords: true },
@@ -61,7 +72,7 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
     where: eq(transactionTable.userId, userId),
     orderBy: desc(transactionTable.valueDate),
     limit: PAGE_SIZE,
-    offset: (page - 1) * PAGE_SIZE,
+    offset,
     columns: {
       additionalInformation: true,
       amount: true,
@@ -95,17 +106,25 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
     ?.toISOString()
     .split("T")[0];
 
+  const initialSelectedTransactions = transactionsWithSuggestedCategory.map(
+    (it) => ({
+      transactionId: it.transactionId,
+      categoryId: it.suggestedCategory?.id ?? null,
+      selected: !it.category && !!it.suggestedCategory,
+    }),
+  );
+
   return json({
-    transactions: transactionsWithSuggestedCategory,
+    transactions: {
+      entries: transactionsWithSuggestedCategory,
+      offset,
+      totalPages,
+      limit: PAGE_SIZE,
+      totalCount: transactionCount,
+    },
     lastSavedTransactionDate,
     categories: allCategories,
-    initialSelectedTransactions: transactionsWithSuggestedCategory.map(
-      (it) => ({
-        transactionId: it.transactionId,
-        categoryId: it.suggestedCategory?.id ?? null,
-        selected: !it.category && !!it.suggestedCategory,
-      }),
-    ),
+    initialSelectedTransactions,
   });
 }
 
@@ -250,6 +269,22 @@ export default function Transactions() {
   } = useLoaderData<typeof loader>();
   const navigation = useNavigation();
   const isNavigating = navigation.state !== "idle";
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const currentPage = pageSchema.parse(searchParams.get("page")) ?? 1;
+  const canGoBack = !!currentPage && currentPage > 1;
+  const canGoForward = !currentPage || currentPage < transactions.totalPages;
+
+  function changePage(direction: "back" | "forward") {
+    const newPage = direction === "back" ? currentPage - 1 : currentPage + 1;
+    setSearchParams(
+      (prev) => {
+        prev.set("page", newPage.toString());
+        return prev;
+      },
+      { preventScrollReset: true },
+    );
+  }
 
   const actionData = useActionData() as { success: boolean } | undefined;
 
@@ -283,7 +318,52 @@ export default function Transactions() {
       )}
       <div className="mb-4 flex items-end justify-between">
         <h1 className="text-xl">Transactions</h1>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          <Button
+            variant="secondary"
+            disabled={!canGoBack}
+            onClick={() => {
+              setSearchParams(
+                (prev) => {
+                  prev.set("page", "1");
+                  return prev;
+                },
+                { preventScrollReset: true },
+              );
+            }}
+          >
+            {"<<"}
+          </Button>
+          <Button
+            variant="secondary"
+            disabled={!canGoBack}
+            onClick={() => changePage("back")}
+          >
+            {"<"}
+          </Button>
+          <span>{searchParams.get("page") ?? 1}</span>
+          <Button
+            variant="secondary"
+            disabled={!canGoForward}
+            onClick={() => changePage("forward")}
+          >
+            {">"}
+          </Button>
+          <Button
+            variant="secondary"
+            disabled={!canGoForward}
+            onClick={() => {
+              setSearchParams(
+                (prev) => {
+                  prev.set("page", transactions.totalPages.toString());
+                  return prev;
+                },
+                { preventScrollReset: true },
+              );
+            }}
+          >
+            {">>"}
+          </Button>
           <Form method="POST" reloadDocument>
             <input
               readOnly
@@ -330,7 +410,7 @@ export default function Transactions() {
           </tr>
         </thead>
         <tbody>
-          {transactions.map((it) => {
+          {transactions.entries.map((it) => {
             return (
               <TransactionRow
                 key={it.transactionId}
@@ -447,4 +527,4 @@ function DataCell({ children }: { children: React.ReactNode }) {
 }
 
 type Loader = typeof loader;
-type ClientTransaction = SerializeFrom<Loader>["transactions"][0];
+type ClientTransaction = SerializeFrom<Loader>["transactions"]["entries"][0];
