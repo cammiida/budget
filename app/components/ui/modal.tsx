@@ -1,4 +1,5 @@
-import { PropsWithChildren, ReactNode } from "react";
+import type { PropsWithChildren, ReactNode } from "react";
+import { useDisableBodyScroll } from "~/hooks/useDisableBodyScroll";
 import { Button } from "./button";
 
 type ModalProps = {
@@ -15,13 +16,15 @@ export default function Modal({
   onClose,
   actionButton,
 }: PropsWithChildren<ModalProps>) {
+  useDisableBodyScroll(isOpen);
+
   if (!isOpen) return null;
 
   return (
     <div>
       <div
         onClick={(e) => e.stopPropagation()}
-        className="fixed left-0 top-0 z-20 flex h-full w-full items-center justify-center "
+        className="fixed left-0 top-0 z-20 flex h-full w-full items-center justify-center"
       >
         <div className="absolute h-full w-full bg-gray-900 opacity-50" />
         <div className="max-h-3/4 z-50 mx-auto flex w-11/12 flex-col rounded bg-white px-8 py-6 text-left shadow-lg">

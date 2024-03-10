@@ -1,11 +1,10 @@
-import {
+import type {
   ActionFunctionArgs,
   AppLoadContext,
   LoaderFunctionArgs,
   SerializeFrom,
-  json,
-  redirect,
 } from "@remix-run/cloudflare";
+import { json, redirect } from "@remix-run/cloudflare";
 import {
   Form,
   Outlet,
@@ -13,23 +12,20 @@ import {
   useLoaderData,
   useNavigate,
   useNavigation,
+  useRouteLoaderData,
   useSearchParams,
   useSubmit,
 } from "@remix-run/react";
 import { and, desc, eq, sql } from "drizzle-orm";
-import { useState } from "react";
+import type { PropsWithChildren } from "react";
 import { route } from "routes-gen";
 import { z } from "zod";
 import { Button } from "~/components/ui/button";
 import { getDbFromContext } from "~/lib/db.service.server";
 import { DbApi } from "~/lib/dbApi";
 import { GoCardlessApi } from "~/lib/gocardless-api.server";
-import {
-  NewTransaction,
-  Transaction,
-  category,
-  transaction as transactionTable,
-} from "~/lib/schema";
+import type { NewTransaction, Transaction } from "~/lib/schema";
+import { category, transaction as transactionTable } from "~/lib/schema";
 import { formatDate, remoteToInternalTransaction } from "~/lib/utils";
 
 const PAGE_SIZE = 10;
@@ -91,35 +87,15 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
     },
   });
 
-  const transactionsWithSuggestedCategory = transactions.map((transaction) => {
-    const suggestedCategory = allCategories.find((category) =>
-      category.keywords?.some((keyword) =>
-        transaction.additionalInformation
-          ?.toLocaleLowerCase()
-          .includes(keyword.toLocaleLowerCase()),
-      ),
-    );
-
-    return { ...transaction, suggestedCategory };
-  });
-
   const lastSavedTransactionDate = (
     await dbApi.getLatestTransactionDate()
   )?.date
     ?.toISOString()
     .split("T")[0];
 
-  const initialSelectedTransactions = transactionsWithSuggestedCategory.map(
-    (it) => ({
-      transactionId: it.transactionId,
-      categoryId: it.suggestedCategory?.id ?? null,
-      selected: !it.category && !!it.suggestedCategory,
-    }),
-  );
-
   return json({
     transactions: {
-      entries: transactionsWithSuggestedCategory,
+      entries: transactions,
       offset,
       totalPages,
       limit: PAGE_SIZE,
@@ -127,7 +103,6 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
     },
     lastSavedTransactionDate,
     categories: allCategories,
-    initialSelectedTransactions,
   });
 }
 
@@ -210,15 +185,17 @@ async function saveCategories({
 }) {
   const transactions = z
     .string()
-    .transform((arg) =>
-      z
+    .transform((arg) => {
+      if (!arg) return [];
+
+      return z
         .object({
           transactionId: z.string(),
           categoryId: z.number().nullable(),
         })
         .array()
-        .parse(JSON.parse(arg)),
-    )
+        .parse(JSON.parse(arg));
+    })
     .parse(formData.get("transactions"));
 
   const db = getDbFromContext(context);
@@ -265,11 +242,8 @@ export async function action({ request, context }: ActionFunctionArgs) {
 }
 
 export default function Transactions() {
-  const {
-    transactions,
-    lastSavedTransactionDate,
-    initialSelectedTransactions,
-  } = useLoaderData<typeof loader>();
+  const { transactions, lastSavedTransactionDate } =
+    useLoaderData<typeof loader>();
   const navigate = useNavigate();
   const navigation = useNavigation();
   const isNavigating = navigation.state !== "idle";
@@ -291,27 +265,6 @@ export default function Transactions() {
   }
 
   const actionData = useActionData() as { success: boolean } | undefined;
-
-  const [selectedTransactions, setSelectedTransactions] = useState<
-    (Pick<Transaction, "transactionId" | "categoryId"> & {
-      selected: boolean;
-    })[]
-  >(initialSelectedTransactions);
-  // TODO: mulitple suggested categories
-
-  function toggleTransactionSelection(
-    transactionId: string,
-    selected: boolean,
-  ) {
-    setSelectedTransactions((prev) =>
-      prev.map((it) => {
-        if (it.transactionId === transactionId) {
-          return { ...it, selected };
-        }
-        return it;
-      }),
-    );
-  }
 
   return (
     <div className="relative">
@@ -369,23 +322,6 @@ export default function Transactions() {
           >
             {">>"}
           </Button>
-          <Form method="POST" reloadDocument>
-            <input
-              readOnly
-              hidden
-              name="transactions"
-              value={JSON.stringify(selectedTransactions)}
-            />
-            <input readOnly hidden name="intent" value="saveCategories" />
-            <Button
-              type="submit"
-              disabled={
-                !selectedTransactions.filter((it) => it.selected).length
-              }
-            >
-              Save
-            </Button>
-          </Form>
           <Button
             onClick={() =>
               navigate(
@@ -413,25 +349,21 @@ export default function Transactions() {
       <table className="w-full shadow-lg">
         <thead>
           <tr>
-            <th className="rounded-tl-md bg-slate-100 p-4 text-left"></th>
-            <th className="bg-slate-100 p-4 text-left">Bank</th>
+            <th className="rounded-tl-md bg-slate-100 p-4 text-left">Bank</th>
             <th className="bg-slate-100 p-4 text-left">Account</th>
             <th className="bg-slate-100 p-4 text-left">Details</th>
             <th className="bg-slate-100 p-4 text-left">Amount</th>
-            <th className="bg-slate-100 p-4 text-left">Category</th>
             <th className="rounded-tr-md bg-slate-100 p-4 text-left">
-              Suggested category
+              Category
             </th>
           </tr>
         </thead>
         <tbody>
           {transactions.entries.map((it) => {
             return (
-              <TransactionRow
-                key={it.transactionId}
-                transaction={it}
-                toggleTransactionSelection={toggleTransactionSelection}
-              />
+              <tr key={it.transactionId} className="border border-slate-100">
+                <TransactionRowContent transaction={it} />
+              </tr>
             );
           })}
         </tbody>
@@ -440,41 +372,26 @@ export default function Transactions() {
   );
 }
 
-function TransactionRow({
-  transaction: aggregatedTrans,
-  toggleTransactionSelection,
-}: {
+type TransactionRowContentProps = {
   transaction: ClientTransaction;
-  toggleTransactionSelection: (
-    transactionId: string,
-    selected: boolean,
-  ) => void;
-}) {
+  disableChangeCategory?: boolean;
+};
+
+export function TransactionRowContent({
+  transaction: aggregatedTrans,
+  disableChangeCategory = false,
+}: TransactionRowContentProps) {
   const { bank, account, category, ...transaction } = aggregatedTrans;
-  const { categories } = useLoaderData<typeof loader>();
+  const { categories } = useRouteLoaderData(
+    "routes" + route("/transactions"),
+  ) as SerializeFrom<typeof loader>;
 
   const date = transaction.valueDate ?? transaction.bookingDate;
 
   const submit = useSubmit();
 
   return (
-    <tr className="border border-slate-100">
-      <DataCell>
-        {transaction.suggestedCategory && (
-          <input
-            type="checkbox"
-            disabled={!transaction.suggestedCategory}
-            defaultChecked={!category && !!transaction.suggestedCategory}
-            onChange={(e) =>
-              transaction.suggestedCategory &&
-              toggleTransactionSelection(
-                transaction.transactionId,
-                e.currentTarget.checked,
-              )
-            }
-          />
-        )}
-      </DataCell>
+    <>
       <DataCell>
         <img
           className="h-8 w-8 rounded-full"
@@ -497,47 +414,44 @@ function TransactionRow({
         {transaction.amount} {transaction.currency}
       </DataCell>
       <DataCell>
-        <Form method="POST">
-          <select
-            defaultValue={category?.id}
-            onChange={(event) => {
-              toggleTransactionSelection(
-                transaction.transactionId,
-                !!transaction.suggestedCategory &&
-                  event.currentTarget.value === "",
-              );
-
-              const formData = new FormData();
-              formData.append("intent", "saveCategories");
-              formData.append(
-                "transactions",
-                JSON.stringify([
-                  {
-                    transactionId: transaction.transactionId,
-                    categoryId: event.currentTarget.value
-                      ? parseInt(event.currentTarget.value)
-                      : null,
-                  },
-                ]),
-              );
-              return submit(formData, { method: "POST" });
-            }}
-          >
-            <option value=""></option>
-            {categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.name}
-              </option>
-            ))}
-          </select>
-        </Form>
+        {disableChangeCategory ? (
+          category?.name
+        ) : (
+          <Form method="POST">
+            <select
+              defaultValue={category?.id}
+              onChange={(event) => {
+                const formData = new FormData();
+                formData.append("intent", "saveCategories");
+                formData.append(
+                  "transactions",
+                  JSON.stringify([
+                    {
+                      transactionId: transaction.transactionId,
+                      categoryId: event.currentTarget.value
+                        ? parseInt(event.currentTarget.value)
+                        : null,
+                    },
+                  ]),
+                );
+                return submit(formData, { method: "POST" });
+              }}
+            >
+              <option value=""></option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+          </Form>
+        )}
       </DataCell>
-      <DataCell>{transaction.suggestedCategory?.name ?? ""}</DataCell>
-    </tr>
+    </>
   );
 }
 
-function DataCell({ children }: { children: React.ReactNode }) {
+export function DataCell({ children }: PropsWithChildren) {
   return <td className="p-4">{children}</td>;
 }
 
