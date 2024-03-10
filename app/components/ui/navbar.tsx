@@ -1,4 +1,4 @@
-import { Form, Link } from "@remix-run/react";
+import { Form, Link, NavLink } from "@remix-run/react";
 import { useState } from "react";
 import { RouteParams, route } from "routes-gen";
 import { useRootData } from "~/root";
@@ -81,12 +81,14 @@ export function Navbar() {
             <ul className="py-2" aria-labelledby="user-menu-button">
               {ROUTES.map((it) => (
                 <li key={it.route}>
-                  <Link
+                  <NavLink
                     to={it.route}
-                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600 dark:hover:text-white"
+                    className={({ isActive }) =>
+                      `${isActive && " bg-slate-100"} block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600 dark:hover:text-white`
+                    }
                   >
                     {it.name}
-                  </Link>
+                  </NavLink>
                 </li>
               ))}
               <li>
@@ -136,12 +138,14 @@ export function Navbar() {
           <ul className="mt-4 flex flex-col rounded-lg border border-gray-100 bg-gray-50 p-4 font-medium dark:border-gray-700 dark:bg-gray-800 md:mt-0 md:flex-row md:space-x-8 md:border-0 md:bg-white md:p-0 md:dark:bg-gray-900 rtl:space-x-reverse">
             {ROUTES.map((it) => (
               <li key={it.route}>
-                <Link
+                <NavLink
                   to={it.route}
-                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600 dark:hover:text-white"
+                  className={({ isActive }) =>
+                    `${isActive && "border-b-2 border-slate-400"} block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600 dark:hover:text-white`
+                  }
                 >
                   {it.name}
-                </Link>
+                </NavLink>
               </li>
             ))}
           </ul>
