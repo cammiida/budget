@@ -8,14 +8,17 @@ import {
 } from "@remix-run/cloudflare";
 import {
   Form,
+  Outlet,
   useActionData,
   useLoaderData,
+  useNavigate,
   useNavigation,
   useSearchParams,
   useSubmit,
 } from "@remix-run/react";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { useState } from "react";
+import { route } from "routes-gen";
 import { z } from "zod";
 import { Button } from "~/components/ui/button";
 import { getDbFromContext } from "~/lib/db.service.server";
@@ -267,6 +270,7 @@ export default function Transactions() {
     lastSavedTransactionDate,
     initialSelectedTransactions,
   } = useLoaderData<typeof loader>();
+  const navigate = useNavigate();
   const navigation = useNavigation();
   const isNavigating = navigation.state !== "idle";
   const [searchParams, setSearchParams] = useSearchParams();
@@ -311,6 +315,7 @@ export default function Transactions() {
 
   return (
     <div className="relative">
+      <Outlet />
       {!!actionData && !actionData.success && (
         <div className="absolute left-1/2 w-96 -translate-x-1/2 transform rounded-md border border-red-300 bg-red-200 px-8 py-4 text-center">
           Something went wrong 😬
@@ -381,6 +386,16 @@ export default function Transactions() {
               Save
             </Button>
           </Form>
+          <Button
+            onClick={() =>
+              navigate(
+                route("/transactions/suggest-categories") +
+                  `?${searchParams.toString()}`,
+              )
+            }
+          >
+            Suggest categories
+          </Button>
           <Form method="POST">
             {lastSavedTransactionDate && (
               <input
