@@ -250,18 +250,17 @@ export default function Transactions() {
   const canGoBack = !!currentPage && currentPage > 1;
   const canGoForward = !currentPage || currentPage < transactions.totalPages;
 
-  function changePage(direction: "back" | "forward") {
-    const newPage = direction === "back" ? currentPage - 1 : currentPage + 1;
+  const actionData = useActionData() as { success: boolean } | undefined;
+
+  function setPage(page: number) {
     setSearchParams(
       (prev) => {
-        prev.set("page", newPage.toString());
+        prev.set("page", page.toString());
         return prev;
       },
       { preventScrollReset: true },
     );
   }
-
-  const actionData = useActionData() as { success: boolean } | undefined;
 
   return (
     <div className="relative">
@@ -277,22 +276,14 @@ export default function Transactions() {
           <Button
             variant="secondary"
             disabled={!canGoBack}
-            onClick={() => {
-              setSearchParams(
-                (prev) => {
-                  prev.set("page", "1");
-                  return prev;
-                },
-                { preventScrollReset: true },
-              );
-            }}
+            onClick={() => setPage(1)}
           >
             {"<<"}
           </Button>
           <Button
             variant="secondary"
             disabled={!canGoBack}
-            onClick={() => changePage("back")}
+            onClick={() => setPage(currentPage - 1)}
           >
             {"<"}
           </Button>
@@ -300,22 +291,14 @@ export default function Transactions() {
           <Button
             variant="secondary"
             disabled={!canGoForward}
-            onClick={() => changePage("forward")}
+            onClick={() => setPage(currentPage + 1)}
           >
             {">"}
           </Button>
           <Button
             variant="secondary"
             disabled={!canGoForward}
-            onClick={() => {
-              setSearchParams(
-                (prev) => {
-                  prev.set("page", transactions.totalPages.toString());
-                  return prev;
-                },
-                { preventScrollReset: true },
-              );
-            }}
+            onClick={() => setPage(transactions.totalPages)}
           >
             {">>"}
           </Button>
