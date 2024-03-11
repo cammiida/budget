@@ -1,7 +1,11 @@
-import { ClassValue, clsx } from "clsx";
-import { TransactionSchema } from "generated-sources/gocardless";
+import type { SerializeFrom } from "@remix-run/cloudflare";
+import { useRouteLoaderData } from "@remix-run/react";
+import type { ClassValue } from "clsx";
+import { clsx } from "clsx";
+import type { TransactionSchema } from "generated-sources/gocardless";
+import type { RouteId } from "route-ids";
 import { twMerge } from "tailwind-merge";
-import { Transaction } from "./schema";
+import type { Transaction } from "./schema";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -48,4 +52,8 @@ export function formatDate(dateString: string) {
   const day = date.getDate().toString().padStart(2, "0");
   const month = (date.getMonth() + 1).toString().padStart(2, "0");
   return `${day}.${month}.${date.getFullYear()}`;
+}
+
+export function useRouteLoaderDataTyped<T>(routeId: RouteId) {
+  return useRouteLoaderData(routeId) as SerializeFrom<T>;
 }

@@ -12,7 +12,6 @@ import {
   useLoaderData,
   useNavigate,
   useNavigation,
-  useRouteLoaderData,
   useSearchParams,
   useSubmit,
 } from "@remix-run/react";
@@ -26,7 +25,11 @@ import { DbApi } from "~/lib/dbApi";
 import { GoCardlessApi } from "~/lib/gocardless-api.server";
 import type { NewTransaction, Transaction } from "~/lib/schema";
 import { category, transaction as transactionTable } from "~/lib/schema";
-import { formatDate, remoteToInternalTransaction } from "~/lib/utils";
+import {
+  formatDate,
+  remoteToInternalTransaction,
+  useRouteLoaderDataTyped,
+} from "~/lib/utils";
 
 const PAGE_SIZE = 10;
 
@@ -382,9 +385,10 @@ export function TransactionRowContent({
   disableChangeCategory = false,
 }: TransactionRowContentProps) {
   const { bank, account, category, ...transaction } = aggregatedTrans;
-  const { categories } = useRouteLoaderData(
-    "routes" + route("/transactions"),
-  ) as SerializeFrom<typeof loader>;
+
+  const { categories } = useRouteLoaderDataTyped<Loader>(
+    "routes/transactions+/_transactions",
+  );
 
   const date = transaction.valueDate ?? transaction.bookingDate;
 
