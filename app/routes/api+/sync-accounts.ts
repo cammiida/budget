@@ -1,7 +1,8 @@
-import { ActionFunctionArgs, json, redirect } from "@remix-run/cloudflare";
+import type { ActionFunctionArgs } from "@remix-run/cloudflare";
+import { json, redirect } from "@remix-run/cloudflare";
 import { DbApi } from "~/lib/dbApi";
 import { GoCardlessApi } from "~/lib/gocardless-api.server";
-import { Account, NewAccount } from "~/lib/schema";
+import type { NewAccount } from "~/lib/schema";
 
 export async function action({ context, request }: ActionFunctionArgs) {
   const formData = await request.formData();

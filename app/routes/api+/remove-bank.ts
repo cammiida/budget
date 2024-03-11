@@ -1,4 +1,5 @@
-import { ActionFunctionArgs, json } from "@remix-run/cloudflare";
+import type { ActionFunctionArgs } from "@remix-run/cloudflare";
+import { json } from "@remix-run/cloudflare";
 import { DbApi } from "~/lib/dbApi";
 
 export async function action({ context, request }: ActionFunctionArgs) {
