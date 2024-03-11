@@ -2,7 +2,6 @@ import type {
   ActionFunctionArgs,
   AppLoadContext,
   LoaderFunctionArgs,
-  SerializeFrom,
 } from "@remix-run/cloudflare";
 import { json, redirect } from "@remix-run/cloudflare";
 import {
@@ -13,10 +12,8 @@ import {
   useNavigate,
   useNavigation,
   useSearchParams,
-  useSubmit,
 } from "@remix-run/react";
 import { and, desc, eq, sql } from "drizzle-orm";
-import type { PropsWithChildren } from "react";
 import { route } from "routes-gen";
 import { z } from "zod";
 import { Button } from "~/components/ui/button";
@@ -25,11 +22,8 @@ import { DbApi } from "~/lib/dbApi";
 import { GoCardlessApi } from "~/lib/gocardless-api.server";
 import type { NewTransaction, Transaction } from "~/lib/schema";
 import { category, transaction as transactionTable } from "~/lib/schema";
-import {
-  formatDate,
-  remoteToInternalTransaction,
-  useRouteLoaderDataTyped,
-} from "~/lib/utils";
+import { remoteToInternalTransaction } from "~/lib/utils";
+import { TransactionRowContent } from "./components/TransactionRowContent";
 
 const PAGE_SIZE = 10;
 
@@ -375,89 +369,4 @@ export default function Transactions() {
   );
 }
 
-type TransactionRowContentProps = {
-  transaction: ClientTransaction;
-  disableChangeCategory?: boolean;
-};
-
-export function TransactionRowContent({
-  transaction: aggregatedTrans,
-  disableChangeCategory = false,
-}: TransactionRowContentProps) {
-  const { bank, account, category, ...transaction } = aggregatedTrans;
-
-  const { categories } = useRouteLoaderDataTyped<Loader>(
-    "routes/transactions+/_transactions",
-  );
-
-  const date = transaction.valueDate ?? transaction.bookingDate;
-
-  const submit = useSubmit();
-
-  return (
-    <>
-      <DataCell>
-        <img
-          className="h-8 w-8 rounded-full"
-          src={bank.logo ?? undefined}
-          alt={bank.name}
-        />
-        {bank.name}
-      </DataCell>
-      <DataCell>
-        <small>{account.bban}</small>
-        <br />
-        {account.name.split(",").slice(0, -1).join(", ")}
-      </DataCell>
-      <DataCell>
-        {date && <small>{formatDate(date)}</small>}
-        <br />
-        {transaction.additionalInformation}
-      </DataCell>
-      <DataCell>
-        {transaction.amount} {transaction.currency}
-      </DataCell>
-      <DataCell>
-        {disableChangeCategory ? (
-          category?.name
-        ) : (
-          <Form method="POST">
-            <select
-              defaultValue={category?.id}
-              onChange={(event) => {
-                const formData = new FormData();
-                formData.append("intent", "saveCategories");
-                formData.append(
-                  "transactions",
-                  JSON.stringify([
-                    {
-                      transactionId: transaction.transactionId,
-                      categoryId: event.currentTarget.value
-                        ? parseInt(event.currentTarget.value)
-                        : null,
-                    },
-                  ]),
-                );
-                return submit(formData, { method: "POST" });
-              }}
-            >
-              <option value=""></option>
-              {categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
-          </Form>
-        )}
-      </DataCell>
-    </>
-  );
-}
-
-export function DataCell({ children }: PropsWithChildren) {
-  return <td className="p-4">{children}</td>;
-}
-
-type Loader = typeof loader;
-type ClientTransaction = SerializeFrom<Loader>["transactions"]["entries"][0];
+export type Loader = typeof loader;

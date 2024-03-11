@@ -13,7 +13,8 @@ import { Button } from "~/components/ui/button";
 import Modal from "~/components/ui/modal";
 import { getDbFromContext } from "~/lib/db.service.server";
 import { category, transaction as transactionTable } from "~/lib/schema";
-import { DataCell, TransactionRowContent } from "./_transactions";
+import { DataCell } from "./components/DataCell";
+import { TransactionRowContent } from "./components/TransactionRowContent";
 
 export async function loader({ context }: LoaderFunctionArgs) {
   const user = context.user;
