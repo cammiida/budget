@@ -47,13 +47,17 @@ export async function loader({ context }: LoaderFunctionArgs) {
 
   const transactionsWithSuggestedCategory = transactions
     .map((transaction) => {
-      const suggestedCategory = categories.find((category) =>
-        category.keywords?.some((keyword) =>
+      const suggestedCategory = categories.find((category) => {
+        if (!category.keywords?.filter(Boolean).length) {
+          return false;
+        }
+
+        return category.keywords.some((keyword) =>
           transaction.additionalInformation
             ?.toLocaleLowerCase()
             .includes(keyword.toLocaleLowerCase()),
-        ),
-      );
+        );
+      });
 
       return { ...transaction, suggestedCategory };
     })
