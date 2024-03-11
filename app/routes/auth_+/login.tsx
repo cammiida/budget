@@ -1,8 +1,8 @@
-import {
+import type {
   ActionFunctionArgs,
   LoaderFunctionArgs,
-  redirect,
 } from "@remix-run/cloudflare";
+import { redirect } from "@remix-run/cloudflare";
 import { Form } from "@remix-run/react";
 import { Button } from "~/components/ui/button";
 import { authenticate } from "~/lib/auth.server";
@@ -10,7 +10,8 @@ import { flashSession } from "~/lib/cookie.server";
 
 export async function action(args: ActionFunctionArgs) {
   const cookieHeader = args.request.headers.get("Cookie");
-  const fSession = await flashSession.getSession(cookieHeader);
+  const flashSessionCookie = flashSession(args.context.env);
+  const fSession = await flashSessionCookie.getSession(cookieHeader);
 
   const user = await authenticate(args);
   if (!user) {
@@ -21,7 +22,7 @@ export async function action(args: ActionFunctionArgs) {
 
     return redirect("/auth/login", {
       headers: {
-        "Set-Cookie": await flashSession.commitSession(fSession),
+        "Set-Cookie": await flashSessionCookie.commitSession(fSession),
       },
     });
   }

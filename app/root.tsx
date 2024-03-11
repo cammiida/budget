@@ -1,10 +1,10 @@
-import {
+import type {
   LinksFunction,
   LoaderFunctionArgs,
   MetaFunction,
   SerializeFrom,
-  json,
 } from "@remix-run/cloudflare";
+import { json } from "@remix-run/cloudflare";
 import {
   Links,
   LiveReload,
@@ -35,12 +35,16 @@ export const meta: MetaFunction = () => {
 
 export async function loader(args: LoaderFunctionArgs) {
   const cookieHeader = args.request.headers.get("Cookie");
-  const fSession = await flashSession.getSession(cookieHeader);
+  const flashSessionCookie = flashSession(args.context.env);
+  const fSession = await flashSessionCookie.getSession(cookieHeader);
   const toast = fSession.get("error") || null;
   const user = await getUserSession(args);
 
   const headers = new Headers();
-  headers.append("Set-Cookie", await flashSession.commitSession(fSession));
+  headers.append(
+    "Set-Cookie",
+    await flashSessionCookie.commitSession(fSession),
+  );
 
   return json(
     {
@@ -49,7 +53,7 @@ export async function loader(args: LoaderFunctionArgs) {
     },
     {
       headers,
-    }
+    },
   );
 }
 
@@ -66,7 +70,7 @@ export default function App() {
       </head>
       <body>
         <Navbar />
-        <div className="my-8 mx-6">
+        <div className="mx-6 my-8">
           <Outlet />
         </div>
         <ScrollRestoration />

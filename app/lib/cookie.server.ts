@@ -1,11 +1,8 @@
-import {
-  Session,
-  SessionData,
-  createCookieSessionStorage,
-} from "@remix-run/cloudflare";
-import { Env } from "env.server";
-import { SpectacularJWTObtain } from "generated-sources/gocardless";
-import { GoogleProfile } from "./google-strategy.server";
+import type { Session, SessionData } from "@remix-run/cloudflare";
+import { createCookieSessionStorage } from "@remix-run/cloudflare";
+import type { Env } from "env.server";
+import type { SpectacularJWTObtain } from "generated-sources/gocardless";
+import type { GoogleProfile } from "./google-strategy.server";
 
 export type GoogleSession = Pick<
   GoogleProfile,
@@ -34,20 +31,19 @@ export const createSessionStorage = (env: Env) => {
   });
 };
 
-export const flashSession = createCookieSessionStorage<
-  SessionData,
-  SessionFlashData
->({
-  cookie: {
-    name: "__flash_session", // use any name you want here
-    sameSite: "lax", // this helps with CSRF
-    path: "/", // remember to add this so the cookie will work in all routes
-    httpOnly: true, // for security reasons, make this cookie http only
-    secrets: ["secretttokdoakdw"], // TODO: replace this with an actual secret
-    secure: true, // enable this in prod only
-    maxAge: 60 * 60 * 24 * 30,
-  },
-});
+export const flashSession = (env: Env) => {
+  return createCookieSessionStorage<SessionData, SessionFlashData>({
+    cookie: {
+      name: "__flash_session", // use any name you want here
+      httpOnly: true, // for security reasons, make this cookie http only
+      maxAge: 60 * 60 * 24 * 30, // 30 days
+      path: "/", // remember to add this so the cookie will work in all routes
+      sameSite: "lax", // this helps with CSRF
+      secrets: [env.SESSION_SECRET],
+      secure: env.NODE_ENV === "production" ? true : false,
+    },
+  });
+};
 
 // GO_CARDLESS
 
@@ -65,23 +61,23 @@ export const goCardlessStorage =
 
 export function setGoCardlessSession(
   session: Session<SpectacularJWTObtain>,
-  sessionValue: SpectacularJWTObtain
+  sessionValue: SpectacularJWTObtain,
 ) {
   session.set("access", sessionValue.access);
   session.set(
     "access_expires",
-    Date.now() + (sessionValue.access_expires ?? 0)
+    Date.now() + (sessionValue.access_expires ?? 0),
   );
   session.set("refresh", sessionValue.refresh);
   session.set(
     "refresh_expires",
-    Date.now() + (sessionValue.refresh_expires ?? 0)
+    Date.now() + (sessionValue.refresh_expires ?? 0),
   );
   return session;
 }
 
 export function isAccessTokenValid(
-  session: Session<SpectacularJWTObtain>
+  session: Session<SpectacularJWTObtain>,
 ): boolean {
   const access = session.get("access");
   const accessExpires = session.get("access_expires");
@@ -89,7 +85,7 @@ export function isAccessTokenValid(
 }
 
 export function isRefreshTokenValid(
-  session: Session<SpectacularJWTObtain>
+  session: Session<SpectacularJWTObtain>,
 ): boolean {
   const refresh = session.get("refresh");
   const refreshExpires = session.get("refresh_expires");
