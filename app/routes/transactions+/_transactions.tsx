@@ -35,6 +35,7 @@ const pageSchema = z
 export async function loader({ context, request }: LoaderFunctionArgs) {
   const dbApi = DbApi.create({ context });
   const userId = context.user?.id;
+
   if (!userId) {
     return redirect("/auth/login", { status: 401 });
   }
@@ -48,7 +49,8 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
     .from(transactionTable)
     .where(eq(transactionTable.userId, userId));
 
-  const totalPages = Math.ceil(transactionCount / PAGE_SIZE);
+  const totalPages =
+    transactionCount > 0 ? Math.ceil(transactionCount / PAGE_SIZE) : 1;
   const offset = (page - 1) * PAGE_SIZE;
 
   if (page < 1) {
