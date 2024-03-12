@@ -130,29 +130,9 @@ async function syncTransactions({
     ),
   );
 
-  const transformedTransactions: NewTransaction[] = remoteTransactions.flatMap(
-    ({ pending, booked, accountId, bankId }) => {
-      const pendingTransactions = (pending ?? []).flatMap((it) =>
-        remoteToInternalTransaction({
-          remote: it,
-          status: "pending",
-          userId,
-          accountId,
-          bankId,
-        }),
-      );
-
-      const bookedTransactions = booked.flatMap((it) =>
-        remoteToInternalTransaction({
-          remote: it,
-          status: "booked",
-          userId,
-          accountId,
-          bankId,
-        }),
-      );
-      return [...pendingTransactions, ...bookedTransactions];
-    },
+  const transformedTransactions: NewTransaction[] = transformRemoteTransactions(
+    remoteTransactions,
+    userId,
   );
 
   const savedTransactions = await dbApi.saveTransactions(

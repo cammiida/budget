@@ -5,13 +5,48 @@ import { clsx } from "clsx";
 import type { TransactionSchema } from "generated-sources/gocardless";
 import type { RouteId } from "route-ids";
 import { twMerge } from "tailwind-merge";
-import type { Transaction } from "./schema";
+import type { NewTransaction, Transaction } from "./schema";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function remoteToInternalTransaction({
+export function transformRemoteTransactions(
+  remoteTransactions: {
+    bankId: string;
+    accountId: string;
+    booked: TransactionSchema[];
+    pending?: TransactionSchema[] | undefined;
+  }[],
+  userId: number,
+): NewTransaction[] {
+  return remoteTransactions.flatMap(
+    ({ pending, booked, accountId, bankId }) => {
+      const pendingTransactions = (pending ?? []).flatMap((it) =>
+        transformRemoteTransaction({
+          remote: it,
+          status: "pending",
+          userId,
+          accountId,
+          bankId,
+        }),
+      );
+
+      const bookedTransactions = booked.flatMap((it) =>
+        transformRemoteTransaction({
+          remote: it,
+          status: "booked",
+          userId,
+          accountId,
+          bankId,
+        }),
+      );
+      return [...pendingTransactions, ...bookedTransactions];
+    },
+  );
+}
+
+export function transformRemoteTransaction({
   remote,
   status,
   userId,
