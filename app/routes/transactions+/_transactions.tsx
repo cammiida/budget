@@ -13,16 +13,16 @@ import {
   useNavigation,
   useSearchParams,
 } from "@remix-run/react";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import { route } from "routes-gen";
 import { z } from "zod";
 import { Button } from "~/components/ui/button";
 import { getDbFromContext } from "~/lib/db.service.server";
 import { DbApi } from "~/lib/dbApi";
 import { GoCardlessApi } from "~/lib/gocardless-api.server";
-import type { NewTransaction, Transaction } from "~/lib/schema";
+import type { NewTransaction } from "~/lib/schema";
 import { category, transaction as transactionTable } from "~/lib/schema";
-import { remoteToInternalTransaction } from "~/lib/utils";
+import { transformRemoteTransactions } from "~/lib/utils";
 import { TransactionRowContent } from "./components/TransactionRowContent";
 
 const PAGE_SIZE = 10;
@@ -142,47 +142,32 @@ async function syncTransactions({
   return json({ success: true, transactions: savedTransactions });
 }
 
+const transactionStringSchema = z.string().transform((arg) => {
+  if (!arg) return [];
+
+  return z
+    .object({
+      transactionId: z.string(),
+      categoryId: z.number().nullable(),
+    })
+    .array()
+    .parse(JSON.parse(arg));
+});
+
 async function saveCategories({
   formData,
   context,
-  userId,
 }: {
   formData: FormData;
   context: AppLoadContext;
-  userId: number;
 }) {
-  const transactions = z
-    .string()
-    .transform((arg) => {
-      if (!arg) return [];
-
-      return z
-        .object({
-          transactionId: z.string(),
-          categoryId: z.number().nullable(),
-        })
-        .array()
-        .parse(JSON.parse(arg));
-    })
-    .parse(formData.get("transactions"));
-
-  const db = getDbFromContext(context);
-
-  const updatedTransactions = await Promise.all(
-    transactions.map((transaction) =>
-      db
-        .update(transactionTable)
-        .set({ categoryId: transaction.categoryId })
-        .where(
-          and(
-            eq(transactionTable.transactionId, transaction.transactionId),
-            eq(transactionTable.userId, userId),
-          ),
-        )
-        .returning()
-        .get(),
-    ),
+  const transactions = transactionStringSchema.parse(
+    formData.get("transactions"),
   );
+
+  const dbApi = DbApi.create({ context });
+  const updatedTransactions =
+    await dbApi.updateTransactionCategories(transactions);
 
   return json({ success: true, transactions: updatedTransactions });
 }
@@ -203,7 +188,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
   if (intent === "sync") {
     return syncTransactions({ formData, context, userId: user.id });
   } else if (intent === "saveCategories") {
-    return saveCategories({ formData, context, userId: user.id });
+    return saveCategories({ formData, context });
   }
 
   return json({ success: false }, { status: 400 });
@@ -212,16 +197,17 @@ export async function action({ request, context }: ActionFunctionArgs) {
 export default function Transactions() {
   const { transactions, lastSavedTransactionDate } =
     useLoaderData<typeof loader>();
+  const actionData = useActionData() as { success: boolean } | undefined;
+
   const navigate = useNavigate();
   const navigation = useNavigation();
+
   const isNavigating = navigation.state !== "idle";
   const [searchParams, setSearchParams] = useSearchParams();
 
   const currentPage = pageSchema.parse(searchParams.get("page")) ?? 1;
   const canGoBack = !!currentPage && currentPage > 1;
   const canGoForward = !currentPage || currentPage < transactions.totalPages;
-
-  const actionData = useActionData() as { success: boolean } | undefined;
 
   function setPage(page: number) {
     setSearchParams(

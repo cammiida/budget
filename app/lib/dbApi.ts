@@ -265,4 +265,25 @@ export class DbApi {
       .orderBy(desc(schema.transaction.bookingDate))
       .get();
   }
+
+  async updateTransactionCategories(
+    elements: { transactionId: string; categoryId: number | null }[],
+  ) {
+    const currentUser = this.getCurrentUser();
+    return await Promise.all(
+      elements.map((it) =>
+        this.db
+          .update(schema.transaction)
+          .set({ categoryId: it.categoryId })
+          .where(
+            and(
+              eq(schema.transaction.transactionId, it.transactionId),
+              eq(schema.transaction.userId, currentUser.id),
+            ),
+          )
+          .returning()
+          .get(),
+      ),
+    );
+  }
 }
