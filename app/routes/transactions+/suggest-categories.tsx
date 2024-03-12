@@ -1,4 +1,7 @@
-import type { LoaderFunctionArgs } from "@remix-run/cloudflare";
+import type {
+  ActionFunctionArgs,
+  LoaderFunctionArgs,
+} from "@remix-run/cloudflare";
 import { json, redirect } from "@remix-run/cloudflare";
 import {
   useLoaderData,
@@ -15,6 +18,8 @@ import { getDbFromContext } from "~/lib/db.service.server";
 import { category, transaction as transactionTable } from "~/lib/schema";
 import { DataCell } from "./components/DataCell";
 import { TransactionRowContent } from "./components/TransactionRowContent";
+import { transactionStringSchema } from "./_transactions";
+import { DbApi } from "~/lib/dbApi";
 
 export async function loader({ context }: LoaderFunctionArgs) {
   const user = context.user;
@@ -72,6 +77,18 @@ export async function loader({ context }: LoaderFunctionArgs) {
   return json({ transactionsWithSuggestedCategory });
 }
 
+export async function action({ request, context }: ActionFunctionArgs) {
+  const formData = await request.formData();
+  const transactions = transactionStringSchema.parse(
+    formData.get("transactions"),
+  );
+
+  const dbApi = DbApi.create({ context });
+  await dbApi.updateTransactionCategories(transactions);
+
+  return redirect(route("/transactions"));
+}
+
 export default function SuggestCategories() {
   const { transactionsWithSuggestedCategory: transactions } =
     useLoaderData<typeof loader>();
@@ -98,7 +115,6 @@ export default function SuggestCategories() {
 
   function handleSave() {
     const formData = new FormData();
-    formData.append("intent", "saveCategories");
     formData.append(
       "transactions",
       JSON.stringify(
@@ -111,7 +127,7 @@ export default function SuggestCategories() {
       ),
     );
 
-    submit(formData, { method: "POST", action: route("/transactions") });
+    submit(formData, { method: "POST" });
   }
 
   const saveButton = <Button onClick={handleSave}>Save</Button>;

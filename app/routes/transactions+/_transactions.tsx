@@ -141,8 +141,7 @@ async function syncTransactions({
 
   return json({ success: true, transactions: savedTransactions });
 }
-
-const transactionStringSchema = z.string().transform((arg) => {
+export const transactionStringSchema = z.string().transform((arg) => {
   if (!arg) return [];
 
   return z
@@ -153,24 +152,6 @@ const transactionStringSchema = z.string().transform((arg) => {
     .array()
     .parse(JSON.parse(arg));
 });
-
-async function saveCategories({
-  formData,
-  context,
-}: {
-  formData: FormData;
-  context: AppLoadContext;
-}) {
-  const transactions = transactionStringSchema.parse(
-    formData.get("transactions"),
-  );
-
-  const dbApi = DbApi.create({ context });
-  const updatedTransactions =
-    await dbApi.updateTransactionCategories(transactions);
-
-  return json({ success: true, transactions: updatedTransactions });
-}
 
 export async function action({ request, context }: ActionFunctionArgs) {
   const user = context.user;
@@ -188,7 +169,15 @@ export async function action({ request, context }: ActionFunctionArgs) {
   if (intent === "sync") {
     return syncTransactions({ formData, context, userId: user.id });
   } else if (intent === "saveCategories") {
-    return saveCategories({ formData, context });
+    const transactions = transactionStringSchema.parse(
+      formData.get("transactions"),
+    );
+
+    const dbApi = DbApi.create({ context });
+    const updatedTransactions =
+      await dbApi.updateTransactionCategories(transactions);
+
+    return json({ success: true, transactions: updatedTransactions });
   }
 
   return json({ success: false }, { status: 400 });
