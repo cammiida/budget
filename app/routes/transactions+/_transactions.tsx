@@ -25,6 +25,18 @@ import { category, transaction as transactionTable } from "~/lib/schema";
 import { transformRemoteTransactions } from "~/lib/utils";
 import { TransactionRowContent } from "./components/TransactionRowContent";
 
+export const transactionStringSchema = z.string().transform((arg) => {
+  if (!arg) return [];
+
+  return z
+    .object({
+      transactionId: z.string(),
+      categoryId: z.number().nullable(),
+    })
+    .array()
+    .parse(JSON.parse(arg));
+});
+
 const PAGE_SIZE = 10;
 
 const pageSchema = z
@@ -105,15 +117,17 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
   });
 }
 
+type SyncTransactionsArgs = {
+  formData: FormData;
+  context: AppLoadContext;
+  userId: number;
+};
+
 async function syncTransactions({
   formData,
   context,
   userId,
-}: {
-  formData: FormData;
-  context: AppLoadContext;
-  userId: number;
-}) {
+}: SyncTransactionsArgs) {
   const fromDate =
     z.string().nullish().parse(formData.get("fromDate")) ?? undefined;
 
@@ -141,17 +155,6 @@ async function syncTransactions({
 
   return json({ success: true, transactions: savedTransactions });
 }
-export const transactionStringSchema = z.string().transform((arg) => {
-  if (!arg) return [];
-
-  return z
-    .object({
-      transactionId: z.string(),
-      categoryId: z.number().nullable(),
-    })
-    .array()
-    .parse(JSON.parse(arg));
-});
 
 export async function action({ request, context }: ActionFunctionArgs) {
   const user = context.user;
