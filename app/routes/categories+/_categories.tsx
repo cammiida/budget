@@ -11,6 +11,7 @@ import { useState } from "react";
 import { route } from "routes-gen";
 import { z } from "zod";
 import { Button } from "~/components/ui/button";
+import { Input } from "~/components/ui/input";
 import { getDbFromContext } from "~/lib/db.service.server";
 import { DbApi } from "~/lib/dbApi";
 import { category } from "~/lib/schema";
@@ -123,7 +124,7 @@ function CategoryRow({ category }: { category: ClientCategory }) {
     <tr key={category.id} className="border border-slate-100">
       <td className="p-4">{category.name}</td>
       <td className="p-4">
-        <input
+        <Input
           value={keywordsInputValue}
           onChange={(e) => setKeywordsInputValue(e.currentTarget.value)}
         />

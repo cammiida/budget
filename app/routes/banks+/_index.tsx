@@ -1,15 +1,15 @@
-import {
+import type {
   ActionFunctionArgs,
   LoaderFunctionArgs,
-  json,
-  redirect,
 } from "@remix-run/cloudflare";
+import { json, redirect } from "@remix-run/cloudflare";
 import { Form, Link, useFetcher, useLoaderData } from "@remix-run/react";
 import { route } from "routes-gen";
+import { Button } from "~/components/ui/button";
 import { requireLogin } from "~/lib/auth.server";
 import { DbApi } from "~/lib/dbApi";
 import { GoCardlessApi } from "~/lib/gocardless-api.server";
-import { Bank } from "~/lib/schema";
+import type { Bank } from "~/lib/schema";
 
 export async function loader({ context, request }: LoaderFunctionArgs) {
   const session = await requireLogin({ context, request });
@@ -128,13 +128,13 @@ function BankComponent({ bank }: { bank: Bank }) {
       </Link>
       <fetcher.Form method="delete" action={route("/api/remove-bank")}>
         <input type="hidden" name="bankId" value={bank.bankId} />
-        <button
+        <Button
           className="rounded-md bg-red-500 px-2 py-1 text-white disabled:opacity-50"
           type="submit"
           disabled={isDeleting}
         >
           {isDeleting ? "Deleting..." : "Delete"}
-        </button>
+        </Button>
       </fetcher.Form>
     </div>
   );

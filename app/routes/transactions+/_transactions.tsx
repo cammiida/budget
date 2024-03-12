@@ -22,8 +22,8 @@ import { DbApi } from "~/lib/dbApi";
 import { GoCardlessApi } from "~/lib/gocardless-api.server";
 import type { NewTransaction } from "~/lib/schema";
 import { category, transaction as transactionTable } from "~/lib/schema";
-import { transformRemoteTransactions } from "~/lib/utils";
 import { TransactionRowContent } from "./components/TransactionRowContent";
+import { transformRemoteTransactions } from "~/lib/utils";
 
 export const transactionStringSchema = z.string().transform((arg) => {
   if (!arg) return [];
@@ -265,7 +265,7 @@ export default function Transactions() {
             {lastSavedTransactionDate && (
               <input
                 readOnly
-                type="hidden"
+                hidden
                 name="fromDate"
                 value={lastSavedTransactionDate}
               />

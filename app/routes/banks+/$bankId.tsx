@@ -1,4 +1,5 @@
-import { LoaderFunctionArgs, json } from "@remix-run/cloudflare";
+import type { LoaderFunctionArgs } from "@remix-run/cloudflare";
+import { json } from "@remix-run/cloudflare";
 import { Outlet, useFetcher, useLoaderData, useParams } from "@remix-run/react";
 import { route } from "routes-gen";
 import { Button } from "~/components/ui/button";
@@ -50,7 +51,7 @@ export default function Bank() {
               <div className="flex w-full justify-between">
                 <h2 className="text-lg">
                   {/* splits on last , */}
-                  {account.name?.split(/\,(?=[^\,]+$)/)[0]}
+                  {account.name?.split(/,(?=[^,]+$)/)[0]}
                 </h2>
                 <h3 className="text-lg">
                   ({balance?.balanceAmount.currency}

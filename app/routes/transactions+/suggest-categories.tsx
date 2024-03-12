@@ -13,13 +13,14 @@ import { desc, eq } from "drizzle-orm";
 import { useState } from "react";
 import { route } from "routes-gen";
 import { Button } from "~/components/ui/button";
+import { Input } from "~/components/ui/input";
 import Modal from "~/components/ui/modal";
 import { getDbFromContext } from "~/lib/db.service.server";
+import { DbApi } from "~/lib/dbApi";
 import { category, transaction as transactionTable } from "~/lib/schema";
+import { transactionStringSchema } from "./_transactions";
 import { DataCell } from "./components/DataCell";
 import { TransactionRowContent } from "./components/TransactionRowContent";
-import { transactionStringSchema } from "./_transactions";
-import { DbApi } from "~/lib/dbApi";
 
 export async function loader({ context }: LoaderFunctionArgs) {
   const user = context.user;
@@ -177,7 +178,7 @@ export default function SuggestCategories() {
               <tr key={transaction.transactionId}>
                 <DataCell>
                   {transaction.suggestedCategory && (
-                    <input
+                    <Input
                       type="checkbox"
                       disabled={!transaction.suggestedCategory}
                       checked={

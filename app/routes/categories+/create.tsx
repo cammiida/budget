@@ -2,6 +2,7 @@ import type { ActionFunctionArgs } from "@remix-run/cloudflare";
 import { Form, json, redirect, useNavigate } from "@remix-run/react";
 import { route } from "routes-gen";
 import { Button } from "~/components/ui/button";
+import { Input } from "~/components/ui/input";
 import Modal from "~/components/ui/modal";
 import { getDbFromContext } from "~/lib/db.service.server";
 import { category, createCategory } from "~/lib/schema";
@@ -54,8 +55,7 @@ export default function CreateCategory() {
             >
               Category name
             </label>
-            <input
-              className="focus:shadow-outline w-full appearance-none rounded border px-3 py-2 leading-tight text-gray-700 shadow focus:outline-none"
+            <Input
               type="text"
               name="name"
               placeholder="Category name"
@@ -69,8 +69,7 @@ export default function CreateCategory() {
             >
               Keywords
             </label>
-            <input
-              className="focus:shadow-outline w-full appearance-none rounded border px-3 py-2 leading-tight text-gray-700 shadow focus:outline-none"
+            <Input
               type="text"
               name="keywords"
               placeholder="Keywords (comma separated)"
