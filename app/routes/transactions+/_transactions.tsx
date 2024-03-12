@@ -153,20 +153,9 @@ async function syncTransactions({
     },
   );
 
-  let savedTransactions: Transaction[] = [];
-  const limit = 5;
-  for (let start = 0; start < transformedTransactions.length; start += limit) {
-    const end =
-      start + limit > transformedTransactions.length
-        ? transformedTransactions.length
-        : start + limit;
-
-    const slicedResults = await dbApi.saveTransactions(
-      transformedTransactions.slice(start, end),
-    );
-
-    savedTransactions = [...savedTransactions, ...slicedResults];
-  }
+  const savedTransactions = await dbApi.saveTransactions(
+    transformedTransactions,
+  );
 
   return json({ success: true, transactions: savedTransactions });
 }

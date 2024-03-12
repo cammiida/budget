@@ -219,44 +219,40 @@ export class DbApi {
     });
   }
 
-  async saveTransactions(transactions: NewTransaction[]) {
-    try {
-      return await this.db
-        .insert(transactionTable)
-        .values(transactions)
-        .onConflictDoUpdate({
-          target: [
-            transactionTable.transactionId,
-            transactionTable.accountId,
-            transactionTable.userId,
-          ],
-          set: {
-            bankId: sql`excluded.bank_id`,
-            categoryId: sql`excluded.category_id`,
-            status: sql`excluded.status`,
-            bookingDate: sql`excluded.booking_date`,
-            valueDate: sql`excluded.value_date`,
-            amount: sql`excluded.amount`,
-            currency: sql`excluded.currency`,
-            creditorName: sql`excluded.creditor_name`,
-            debtorName: sql`excluded.debtor_name`,
-            additionalInformation: sql`excluded.additional_information`,
-            debtorBban: sql`excluded.debtor_bban`,
-            creditorBban: sql`excluded.creditor_bban`,
-            exchangeRate: sql`excluded.exchange_rate`,
-          } satisfies Record<
-            keyof Omit<Transaction, "transactionId" | "accountId" | "userId">,
-            SQL<Transaction>
-          >,
-        })
-        .returning();
-    } catch (error) {
-      console.error(error);
-      throw new Response("Unable to save transactions", {
-        status: 500,
-        statusText: JSON.stringify(error),
-      });
+  async saveTransactions(
+    transactions: NewTransaction[],
+  ): Promise<Transaction[]> {
+    let savedTransactions: Transaction[] = [];
+    const limit = 5;
+
+    for (let start = 0; start < transactions.length; start += limit) {
+      const end =
+        start + limit > transactions.length
+          ? transactions.length
+          : start + limit;
+
+      try {
+        const slicedResults = await this.db
+          .insert(schema.transaction)
+          .values(transactions.slice(start, end))
+          .onConflictDoNothing({
+            target: [
+              schema.transaction.transactionId,
+              schema.transaction.accountId,
+              schema.transaction.userId,
+            ],
+          })
+          .returning();
+        savedTransactions = [...savedTransactions, ...slicedResults];
+      } catch (error) {
+        console.error(error);
+        throw new Response("Unable to save transactions", {
+          status: 500,
+          statusText: JSON.stringify(error),
+        });
+      }
     }
+    return savedTransactions;
   }
 
   async getLatestTransactionDate() {
