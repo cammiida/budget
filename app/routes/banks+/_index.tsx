@@ -1,8 +1,5 @@
-import type {
-  ActionFunctionArgs,
-  LoaderFunctionArgs,
-} from "@remix-run/cloudflare";
-import { json, redirect } from "@remix-run/cloudflare";
+import type { LoaderFunctionArgs } from "@remix-run/cloudflare";
+import { json } from "@remix-run/cloudflare";
 import { Form, Link, useFetcher, useLoaderData } from "@remix-run/react";
 import { route } from "routes-gen";
 import { Button } from "~/components/ui/button";
@@ -24,58 +21,6 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
   return json({ user, allBanks, chosenBanks });
 }
 
-export async function action({ context, request }: ActionFunctionArgs) {
-  const formData = await request.formData();
-  const bankId = formData.get("bankId")?.toString();
-
-  if (!bankId) {
-    throw new Response("Bank ID is required", { status: 400 });
-  }
-
-  const dbApi = DbApi.create({ context });
-  try {
-    // get or add bank
-    const bank = await dbApi.getBank(bankId);
-
-    // get existing requisition
-    const goCardlessApi = GoCardlessApi.create({ context });
-    const existingRequistion = bank?.requisitionId
-      ? await goCardlessApi.getRequisition({
-          requisitionId: bank.requisitionId,
-        })
-      : null;
-
-    // if requisition exists and is not expired, return requisition
-    if (existingRequistion && existingRequistion.status !== "EX") {
-      return json({ bank, requisition: existingRequistion });
-    }
-
-    // else create a new requisition and redirect to bank authorization
-    const url = new URL(request.url);
-
-    // So that redirects work for all three variants
-    if (url.hostname === "0.0.0.0" || url.hostname === "127.0.0.1") {
-      url.hostname = "localhost";
-    }
-
-    const newRequisition = await goCardlessApi.createRequisition({
-      bankId,
-      redirect: `${url.protocol}//${url.host}/api/authenticate-bank/${bankId}`,
-    });
-
-    if (!newRequisition.link) {
-      throw new Response("Failed to create requisition with link", {
-        status: 500,
-      });
-    }
-
-    return redirect(newRequisition.link);
-  } catch (error) {
-    console.error("Failed to create requisition", error);
-    throw new Response("Failed to create requisition", { status: 500 });
-  }
-}
-
 function Banks() {
   const { allBanks: banks, chosenBanks } = useLoaderData<typeof loader>();
 
@@ -83,7 +28,7 @@ function Banks() {
     <div className="mx-auto flex max-w-lg flex-col items-center gap-10">
       <div className="w-full">
         <h2 className="text-lg">Add a new bank</h2>
-        <Form method="post">
+        <Form method="post" action={route("/banks/new")}>
           <select name="bankId">
             {banks.map((bank) => (
               <option key={bank.id} value={bank.id}>
