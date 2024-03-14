@@ -1,7 +1,7 @@
+import type { SerializeFrom } from "@remix-run/cloudflare";
 import { Form, useSubmit } from "@remix-run/react";
 import { formatDate, useRouteLoaderDataTyped } from "~/lib/utils";
 import { type Loader } from "../_transactions";
-import type { SerializeFrom } from "@remix-run/cloudflare";
 import { DataCell } from "./DataCell";
 
 type TransactionRowContentProps = {

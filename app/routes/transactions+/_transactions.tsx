@@ -2,6 +2,7 @@ import type {
   ActionFunctionArgs,
   AppLoadContext,
   LoaderFunctionArgs,
+  SerializeFrom,
 } from "@remix-run/cloudflare";
 import { json, redirect } from "@remix-run/cloudflare";
 import {
@@ -12,18 +13,20 @@ import {
   useNavigate,
   useNavigation,
   useSearchParams,
+  useSubmit,
 } from "@remix-run/react";
+import type { ColumnDef } from "@tanstack/react-table";
 import { desc, eq, sql } from "drizzle-orm";
 import { route } from "routes-gen";
 import { z } from "zod";
 import { Button } from "~/components/ui/button";
+import { DataTable } from "~/components/ui/data-table";
 import { getDbFromContext } from "~/lib/db.service.server";
 import { DbApi } from "~/lib/dbApi";
 import { GoCardlessApi } from "~/lib/gocardless-api.server";
 import type { NewTransaction } from "~/lib/schema";
 import { category, transaction as transactionTable } from "~/lib/schema";
-import { TransactionRowContent } from "./components/TransactionRowContent";
-import { transformRemoteTransactions } from "~/lib/utils";
+import { formatDate, transformRemoteTransactions } from "~/lib/utils";
 
 export const transactionStringSchema = z.string().transform((arg) => {
   if (!arg) return [];
@@ -187,7 +190,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
 }
 
 export default function Transactions() {
-  const { transactions, lastSavedTransactionDate } =
+  const { transactions, lastSavedTransactionDate, categories } =
     useLoaderData<typeof loader>();
   const actionData = useActionData() as { success: boolean } | undefined;
 
@@ -210,6 +213,65 @@ export default function Transactions() {
       { preventScrollReset: true },
     );
   }
+
+  const columns: ColumnDef<ClientTransaction>[] = [
+    {
+      accessorKey: "bank.name",
+      header: "Bank",
+      cell: ({ row }) => {
+        const bank = row.original.bank;
+        return (
+          <>
+            <img
+              className="h-8 w-8 rounded-full"
+              src={bank?.logo ?? undefined}
+              alt={bank?.name}
+            />
+            <span>{bank?.name}</span>
+          </>
+        );
+      },
+    },
+    {
+      accessorKey: "account.accountId",
+      header: "Account",
+      cell: ({ row }) => {
+        const account = row.original.account;
+        return (
+          <>
+            <small>{account?.bban}</small>
+            <br />
+            {account?.name.split(",").slice(0, -1).join(", ")}
+          </>
+        );
+      },
+    },
+    {
+      accessorKey: "valueDate",
+      header: "Date",
+      cell: ({ row }) => {
+        const transaction = row.original;
+        const date = transaction.valueDate ?? transaction.bookingDate;
+        return <span>{date && formatDate(date)}</span>;
+      },
+    },
+    { accessorKey: "additionalInformation", header: "Details" },
+    {
+      accessorKey: "amount",
+      header: "Amount",
+      cell: ({ row }) => {
+        const transaction = row.original;
+        return `${transaction.amount} ${transaction.currency}`;
+      },
+    },
+    {
+      accessorKey: "category.name",
+      header: "Category",
+      cell: ({ row }) => (
+        <SelectCategory categories={categories} transaction={row.original} />
+      ),
+    },
+  ];
 
   return (
     <div className="relative">
@@ -275,30 +337,51 @@ export default function Transactions() {
           </Form>
         </div>
       </div>
-      <table className="w-full shadow-lg">
-        <thead>
-          <tr>
-            <th className="rounded-tl-md bg-slate-100 p-4 text-left">Bank</th>
-            <th className="bg-slate-100 p-4 text-left">Account</th>
-            <th className="bg-slate-100 p-4 text-left">Details</th>
-            <th className="bg-slate-100 p-4 text-left">Amount</th>
-            <th className="rounded-tr-md bg-slate-100 p-4 text-left">
-              Category
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {transactions.entries.map((it) => {
-            return (
-              <tr key={it.transactionId} className="border border-slate-100">
-                <TransactionRowContent transaction={it} />
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+      <DataTable columns={columns} data={transactions.entries} />
     </div>
   );
 }
 
 export type Loader = typeof loader;
+type ClientTransaction = SerializeFrom<Loader>["transactions"]["entries"][0];
+type ClientCategory = SerializeFrom<Loader>["categories"][0];
+
+function SelectCategory({
+  transaction,
+  categories,
+}: {
+  transaction: ClientTransaction;
+  categories: ClientCategory[];
+}) {
+  const submit = useSubmit();
+  const category = transaction.category;
+
+  return (
+    <select
+      defaultValue={category?.id}
+      onChange={(event) => {
+        const formData = new FormData();
+        formData.append("intent", "saveCategories");
+        formData.append(
+          "transactions",
+          JSON.stringify([
+            {
+              transactionId: transaction.transactionId,
+              categoryId: event.currentTarget.value
+                ? parseInt(event.currentTarget.value)
+                : null,
+            },
+          ]),
+        );
+        return submit(formData, { method: "POST" });
+      }}
+    >
+      <option value=""></option>
+      {categories.map((category) => (
+        <option key={category.id} value={category.id}>
+          {category.name}
+        </option>
+      ))}
+    </select>
+  );
+}
