@@ -1,17 +1,20 @@
 import { Authenticator } from "remix-auth";
-import { GoogleSession, createSessionStorage } from "./cookie.server";
+import type { GoogleSession } from "./cookie.server";
+import { createSessionStorage } from "./cookie.server";
 
 import {
   GoogleStrategy,
   GoogleStrategyDefaultName,
   createGoogleStrategy,
 } from "./google-strategy.server";
-import { ServerArgs } from "./types";
+import type { ServerArgs } from "./types";
+import { redirect } from "@remix-run/cloudflare";
+import { route } from "routes-gen";
 
 function createAuthenticator(args: ServerArgs) {
   const authenticator = new Authenticator<GoogleSession>(
     createSessionStorage(args.context.env),
-    GoogleStrategy.authenticatorOptions
+    GoogleStrategy.authenticatorOptions,
   );
   authenticator.use(createGoogleStrategy(args));
 
@@ -23,22 +26,23 @@ export function authenticate(args: ServerArgs) {
     GoogleStrategyDefaultName,
     args.request,
     {
-      successRedirect: "/",
-      failureRedirect: "/auth/login",
-    }
+      successRedirect: route("/"),
+      failureRedirect: route("/auth/login"),
+    },
   );
 }
 
 export function logout(args: ServerArgs) {
   return createAuthenticator(args).logout(args.request, {
-    redirectTo: "/auth/login",
+    redirectTo: route("/auth/login"),
   });
 }
 
 export async function requireLogin(args: ServerArgs) {
-  return createAuthenticator(args).isAuthenticated(args.request, {
-    failureRedirect: "/auth/login",
-  });
+  const user = args.context.user;
+  if (!user) {
+    throw redirect(route("/auth/login"));
+  }
 }
 
 export async function getUserSession(args: ServerArgs) {

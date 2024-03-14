@@ -1,8 +1,8 @@
-import {
+import type {
   ActionFunctionArgs,
   LoaderFunctionArgs,
-  redirect,
 } from "@remix-run/cloudflare";
+import { redirect } from "@remix-run/cloudflare";
 import { logout } from "~/lib/auth.server";
 
 export async function action(args: ActionFunctionArgs) {

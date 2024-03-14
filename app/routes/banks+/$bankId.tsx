@@ -14,30 +14,33 @@ export async function loader(args: LoaderFunctionArgs) {
   }
 
   const api = DbApi.create(args);
-  const [bank, accounts] = await Promise.all([
-    api.getBank(bankId),
-    api.getAccountsForBanks([bankId]),
-  ]);
+  const accounts = await api.getAccountsForBanks([bankId]);
 
-  return json({ bank, accounts });
+  return json({ accounts });
 }
 
 export default function Bank() {
-  const { bank, accounts } = useLoaderData<typeof loader>();
+  const { accounts } = useLoaderData<typeof loader>();
   const params = useParams();
 
   const fetcher = useFetcher();
 
   return (
     <div className="flex flex-col items-center gap-4">
-      <fetcher.Form method="POST" action={route("/api/sync-accounts")}>
-        <input type="hidden" name="bankId" value={params.bankId} />
-        <Button type="submit" disabled={fetcher.state !== "idle"}>
-          Sync accounts
-        </Button>
-      </fetcher.Form>
-      <h1 className="text-xl">{bank?.name}</h1>
-      <ul className="flex min-w-[400px] max-w-lg flex-col gap-4">
+      <div className="flex w-full justify-between">
+        <h1 className="text-lg">Accounts</h1>
+        <fetcher.Form method="POST" action={route("/api/sync-accounts")}>
+          <input type="hidden" name="bankId" value={params.bankId} />
+          <Button
+            variant="secondary"
+            type="submit"
+            disabled={fetcher.state !== "idle"}
+          >
+            Sync accounts
+          </Button>
+        </fetcher.Form>
+      </div>
+      <ul className="flex w-full min-w-[400px] flex-col gap-4">
         {accounts.map((account) => {
           const balance = account.balances.find(
             (balance) => balance.balanceType === "interimAvailable",

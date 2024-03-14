@@ -1,7 +1,30 @@
-import { redirect, type ActionFunctionArgs } from "@remix-run/cloudflare";
+import type {
+  ActionFunctionArgs,
+  LoaderFunctionArgs,
+} from "@remix-run/cloudflare";
+import { redirect } from "@remix-run/cloudflare";
+import { Form, json, useLoaderData } from "@remix-run/react";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { useState } from "react";
 import { route } from "routes-gen";
+import { Button } from "~/components/ui/button";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "~/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "~/components/ui/popover";
+import { requireLogin } from "~/lib/auth.server";
 import { DbApi } from "~/lib/dbApi";
 import { GoCardlessApi } from "~/lib/gocardless-api.server";
+import { cn } from "~/lib/utils";
 
 export async function action({ context, request }: ActionFunctionArgs) {
   const formData = await request.formData();
@@ -53,4 +76,93 @@ export async function action({ context, request }: ActionFunctionArgs) {
     console.error("Failed to create requisition", error);
     throw new Response("Failed to create requisition", { status: 500 });
   }
+}
+
+export async function loader({ context, request }: LoaderFunctionArgs) {
+  await requireLogin({ context, request });
+
+  const goCardlessApi = GoCardlessApi.create({ context });
+  const banks = await goCardlessApi.getAllBanks();
+
+  return json({
+    banks: banks.map((bank) => ({
+      id: bank.id,
+      name: bank.name,
+      logo: bank.logo,
+    })),
+  });
+}
+
+export default function NewBank() {
+  const { banks } = useLoaderData<typeof loader>();
+  const [isOpen, setIsOpen] = useState(false);
+  const [selectedBankId, setSelectedBankId] = useState("");
+
+  return (
+    <div className="flex w-full flex-col gap-4">
+      <h2 className="text-lg">Add a new bank</h2>
+      <div className="flex flex-col gap-2">
+        <Popover open={isOpen} onOpenChange={setIsOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              role="combobox"
+              aria-expanded={isOpen}
+              className="w-full justify-between"
+            >
+              {selectedBankId
+                ? banks.find((bank) => bank.id === selectedBankId)?.name
+                : "Select bank..."}
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-full p-0">
+            <Command>
+              <CommandInput placeholder="Search bank..." />
+              <CommandList>
+                <CommandEmpty>No bank found.</CommandEmpty>
+                <CommandGroup>
+                  {banks.map((bank) => (
+                    <CommandItem
+                      key={bank.id}
+                      value={bank.name}
+                      onSelect={() => {
+                        setSelectedBankId(
+                          bank.id === selectedBankId ? "" : bank.id,
+                        );
+                        setIsOpen(false);
+                      }}
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          selectedBankId === bank.id
+                            ? "opacity-100"
+                            : "opacity-0",
+                        )}
+                      />
+                      <div className="flex items-center justify-between gap-4">
+                        <img
+                          className="h-8 w-8 rounded-full"
+                          src={bank.logo ?? undefined}
+                          alt={bank.name}
+                        />
+                        <span>{bank.name}</span>
+                      </div>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
+        <Form method="POST" className="self-end">
+          <input readOnly hidden name="bankId" value={selectedBankId} />
+          <Button type="submit" disabled={!selectedBankId}>
+            Submit
+          </Button>
+        </Form>
+      </div>
+    </div>
+  );
 }
