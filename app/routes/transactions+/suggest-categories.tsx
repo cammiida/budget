@@ -1,26 +1,37 @@
 import type {
   ActionFunctionArgs,
   LoaderFunctionArgs,
+  SerializeFrom,
 } from "@remix-run/cloudflare";
 import { json, redirect } from "@remix-run/cloudflare";
 import {
+  Form,
   useLoaderData,
   useNavigate,
   useSearchParams,
-  useSubmit,
 } from "@remix-run/react";
+import type { ColumnDef } from "@tanstack/react-table";
+import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { desc, eq } from "drizzle-orm";
-import { useState } from "react";
+import { Link } from "react-router-dom";
 import { route } from "routes-gen";
 import { Button } from "~/components/ui/button";
-import { Input } from "~/components/ui/input";
-import Modal from "~/components/ui/modal";
+import { Checkbox } from "~/components/ui/checkbox";
+import { DataTable } from "~/components/ui/data-table";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "~/components/ui/dialog";
 import { getDbFromContext } from "~/lib/db.service.server";
 import { DbApi } from "~/lib/dbApi";
 import { category, transaction as transactionTable } from "~/lib/schema";
+import { formatDate } from "~/lib/utils";
 import { transactionStringSchema } from "./_transactions";
-import { DataCell } from "./components/DataCell";
-import { TransactionRowContent } from "./components/TransactionRowContent";
 
 export async function loader({ context }: LoaderFunctionArgs) {
   const user = context.user;
@@ -78,6 +89,10 @@ export async function loader({ context }: LoaderFunctionArgs) {
   return json({ transactionsWithSuggestedCategory });
 }
 
+type ClientTransaction = SerializeFrom<
+  typeof loader
+>["transactionsWithSuggestedCategory"][number];
+
 export async function action({ request, context }: ActionFunctionArgs) {
   const formData = await request.formData();
   const transactions = transactionStringSchema.parse(
@@ -87,122 +102,147 @@ export async function action({ request, context }: ActionFunctionArgs) {
   const dbApi = DbApi.create({ context });
   await dbApi.updateTransactionCategories(transactions);
 
-  return redirect(route("/transactions"));
+  const searchParams = new URL(request.url).searchParams;
+
+  return redirect(route("/transactions") + `?${searchParams.toString()}`);
 }
 
 export default function SuggestCategories() {
   const { transactionsWithSuggestedCategory: transactions } =
     useLoaderData<typeof loader>();
 
-  const submit = useSubmit();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-
-  const [transactionsToSave, setTransactionsToSave] = useState<string[]>([]);
 
   function handleClose() {
     navigate(route("/transactions") + `?${searchParams.toString()}`);
   }
 
-  function handleCheckboxChange(checked: boolean, transactionId: string) {
-    if (checked) {
-      setTransactionsToSave((prev) => [...new Set([...prev, transactionId])]);
-    } else {
-      setTransactionsToSave((prev) =>
-        prev.filter((id) => id !== transactionId),
-      );
-    }
-  }
-
-  function handleSave() {
-    const formData = new FormData();
-    formData.append(
-      "transactions",
-      JSON.stringify(
-        transactionsToSave.map((transactionId) => ({
-          transactionId,
-          categoryId: transactions.find(
-            (transaction) => transaction.transactionId === transactionId,
-          )?.suggestedCategory.id,
-        })),
+  const columns: ColumnDef<ClientTransaction>[] = [
+    {
+      id: "select",
+      header: ({ table }) => (
+        <Checkbox
+          checked={
+            table.getIsAllPageRowsSelected() ||
+            (table.getIsSomePageRowsSelected() && "indeterminate")
+          }
+          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+          aria-label="Select all"
+        />
       ),
-    );
+      cell: ({ row }) => (
+        <Checkbox
+          checked={row.getIsSelected()}
+          onCheckedChange={(value) => row.toggleSelected(!!value)}
+          aria-label="Select row"
+        />
+      ),
+      enableSorting: false,
+      enableHiding: false,
+    },
+    {
+      accessorKey: "bank.name",
+      header: "Bank",
+      cell: ({ row }) => {
+        const bank = row.original.bank;
+        return (
+          <>
+            <img
+              className="h-8 w-8 rounded-full"
+              src={bank?.logo ?? undefined}
+              alt={bank?.name}
+            />
+            <span>{bank?.name}</span>
+          </>
+        );
+      },
+    },
+    {
+      accessorKey: "account.accountId",
+      header: "Account",
+      cell: ({ row }) => {
+        const account = row.original.account;
+        return (
+          <>
+            <small>{account?.bban}</small>
+            <br />
+            {account?.name.split(",").slice(0, -1).join(", ")}
+          </>
+        );
+      },
+    },
+    {
+      accessorKey: "valueDate",
+      header: "Date",
+      cell: ({ row }) => {
+        const transaction = row.original;
+        const date = transaction.valueDate ?? transaction.bookingDate;
+        return <span>{date && formatDate(date)}</span>;
+      },
+    },
+    { accessorKey: "additionalInformation", header: "Details" },
+    {
+      accessorKey: "amount",
+      header: "Amount",
+      cell: ({ row }) => {
+        const transaction = row.original;
+        return `${transaction.amount} ${transaction.currency}`;
+      },
+    },
+    {
+      accessorKey: "suggestedCategory.name",
+      header: "Category",
+    },
+  ];
 
-    submit(formData, { method: "POST" });
-  }
-
-  const saveButton = <Button onClick={handleSave}>Save</Button>;
+  const table = useReactTable({
+    data: transactions,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+  });
 
   return (
-    <Modal
-      title="Suggest Categories"
-      isOpen={true}
-      onClose={handleClose}
-      actionButton={saveButton}
-    >
-      <div className="flex h-96 flex-col gap-4">
-        <div className="flex justify-end gap-4">
-          <Button
-            variant="link"
-            className="self-end"
-            onClick={() =>
-              setTransactionsToSave(transactions.map((it) => it.transactionId))
-            }
-          >
-            Select all
-          </Button>
-          <Button
-            variant="link"
-            className="self-end"
-            onClick={() => setTransactionsToSave([])}
-          >
-            Deselect all
-          </Button>
-        </div>
-        <table className="overflow-auto">
-          <thead>
-            <tr>
-              <th className="rounded-tl-md bg-slate-100 p-4 text-left"></th>
-              <th className="bg-slate-100 p-4 text-left">Bank</th>
-              <th className="bg-slate-100 p-4 text-left">Account</th>
-              <th className="bg-slate-100 p-4 text-left">Details</th>
-              <th className="bg-slate-100 p-4 text-left">Amount</th>
-              <th className="bg-slate-100 p-4 text-left">Category</th>
-              <th className="rounded-tr-md bg-slate-100 p-4 text-left">
-                Suggested category
-              </th>
-            </tr>
-          </thead>
-          <tbody className="overflow-scroll">
-            {transactions.map((transaction) => (
-              <tr key={transaction.transactionId}>
-                <DataCell>
-                  {transaction.suggestedCategory && (
-                    <Input
-                      type="checkbox"
-                      disabled={!transaction.suggestedCategory}
-                      checked={
-                        !!transactionsToSave.includes(transaction.transactionId)
-                      }
-                      onChange={(e) =>
-                        handleCheckboxChange(
-                          e.currentTarget.checked,
-                          transaction.transactionId,
-                        )
-                      }
-                    />
-                  )}
-                </DataCell>
-                <TransactionRowContent
-                  transaction={transaction}
-                  disableChangeCategory
-                />
-                <DataCell>{transaction.suggestedCategory?.name}</DataCell>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </Modal>
+    <Dialog open onOpenChange={handleClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>
+            <h1 className="text-lg">Suggested categories</h1>
+          </DialogTitle>
+          <DialogDescription className="w-full overflow-auto">
+            <div className="flex h-96 flex-col gap-4">
+              <DataTable table={table} />
+            </div>
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="sm:justify-start">
+          <DialogClose asChild>
+            <Link to={route("/transactions") + `?${searchParams.toString()}`}>
+              <Button type="button" variant="secondary">
+                Cancel
+              </Button>
+            </Link>
+          </DialogClose>
+          <Form method="POST">
+            <input
+              readOnly
+              hidden
+              name="transactions"
+              value={JSON.stringify(
+                table
+                  .getSelectedRowModel()
+                  .rows.map(
+                    ({ original: { transactionId, suggestedCategory } }) => ({
+                      transactionId,
+                      categoryId: suggestedCategory.id,
+                    }),
+                  ),
+              )}
+            />
+            <Button type="submit">Save</Button>
+          </Form>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

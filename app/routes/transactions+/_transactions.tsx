@@ -15,7 +15,11 @@ import {
   useSearchParams,
   useSubmit,
 } from "@remix-run/react";
-import type { ColumnDef } from "@tanstack/react-table";
+import {
+  useReactTable,
+  type ColumnDef,
+  getCoreRowModel,
+} from "@tanstack/react-table";
 import { desc, eq, sql } from "drizzle-orm";
 import { route } from "routes-gen";
 import { z } from "zod";
@@ -273,6 +277,12 @@ export default function Transactions() {
     },
   ];
 
+  const table = useReactTable({
+    data: transactions.entries,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+  });
+
   return (
     <div className="relative">
       <Outlet />
@@ -337,7 +347,7 @@ export default function Transactions() {
           </Form>
         </div>
       </div>
-      <DataTable columns={columns} data={transactions.entries} />
+      <DataTable table={table} />
     </div>
   );
 }
