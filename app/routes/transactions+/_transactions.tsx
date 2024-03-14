@@ -16,15 +16,22 @@ import {
   useSubmit,
 } from "@remix-run/react";
 import {
+  getCoreRowModel,
   useReactTable,
   type ColumnDef,
-  getCoreRowModel,
 } from "@tanstack/react-table";
 import { desc, eq, sql } from "drizzle-orm";
 import { route } from "routes-gen";
 import { z } from "zod";
 import { Button } from "~/components/ui/button";
 import { DataTable } from "~/components/ui/data-table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
 import { getDbFromContext } from "~/lib/db.service.server";
 import { DbApi } from "~/lib/dbApi";
 import { GoCardlessApi } from "~/lib/gocardless-api.server";
@@ -367,9 +374,8 @@ function SelectCategory({
   const category = transaction.category;
 
   return (
-    <select
-      defaultValue={category?.id}
-      onChange={(event) => {
+    <Select
+      onValueChange={(value) => {
         const formData = new FormData();
         formData.append("intent", "saveCategories");
         formData.append(
@@ -377,21 +383,24 @@ function SelectCategory({
           JSON.stringify([
             {
               transactionId: transaction.transactionId,
-              categoryId: event.currentTarget.value
-                ? parseInt(event.currentTarget.value)
-                : null,
+              categoryId: value && value !== "null" ? parseInt(value) : null,
             },
           ]),
         );
         return submit(formData, { method: "POST" });
       }}
     >
-      <option value=""></option>
-      {categories.map((category) => (
-        <option key={category.id} value={category.id}>
-          {category.name}
-        </option>
-      ))}
-    </select>
+      <SelectTrigger className="w-[180px]">
+        <SelectValue placeholder={category?.name} />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="null">-</SelectItem>
+        {categories.map((category) => (
+          <SelectItem key={category.id} value={category.id.toString()}>
+            {category.name}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
