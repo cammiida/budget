@@ -60,11 +60,6 @@ export const transactionStringSchema = z.string().transform((arg) => {
 
 const PAGE_SIZE = 10;
 
-const pageSchema = z
-  .string()
-  .transform((arg) => parseInt(arg))
-  .nullable();
-
 export async function loader({ context, request }: LoaderFunctionArgs) {
   const dbApi = DbApi.create({ context });
   const userId = context.user?.id;
@@ -74,40 +69,13 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
   }
 
   const searchParams = new URL(request.url).searchParams;
-  const page = pageSchema.parse(searchParams.get("page")) ?? 1;
 
-  // TODO: zodify
-  const fromDateSearchParam = searchParams.get("from");
-  const toDateSearchParam = searchParams.get("to");
-  const fromDate = fromDateSearchParam
-    ? startOfDay(new Date(fromDateSearchParam))
-    : undefined;
-  const toDate = toDateSearchParam
-    ? endOfDay(new Date(toDateSearchParam))
-    : undefined;
-
-  if (!fromDate || !toDate) {
-    const from = fromDate ?? startOfDay(new Date(addMonths(new Date(), -1)));
-    const to = toDate ?? endOfDay(new Date(addMonths(from, 1)));
-
-    searchParams.set("from", toLocaleDateString(from));
-    searchParams.set("to", toLocaleDateString(to));
-
-    return redirect("/transactions?" + searchParams.toString());
-  }
-
-  if (isBefore(toDate, fromDate)) {
-    searchParams.set(
-      "to",
-      toLocaleDateString(endOfDay(addMonths(fromDate, 1))),
-    );
-    return redirect("/transactions?" + searchParams.toString());
-  }
+  const { from, to } = verifyAndSetDateSearchParams(searchParams);
 
   const whereClause = and(
     eq(transactionTable.userId, userId),
-    gte(transactionTable.valueDate, fromDate),
-    lte(transactionTable.valueDate, toDate),
+    gte(transactionTable.valueDate, from),
+    lte(transactionTable.valueDate, to),
   );
 
   const db = getDbFromContext(context);
@@ -118,15 +86,8 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
 
   const totalPages =
     transactionCount > 0 ? Math.ceil(transactionCount / PAGE_SIZE) : 1;
+  const page = verifyAndSetPageSearchParams({ totalPages, searchParams });
   const offset = (page - 1) * PAGE_SIZE;
-
-  if (page < 1) {
-    searchParams.delete("page");
-    return redirect("/transactions?" + searchParams.toString());
-  } else if (page > totalPages) {
-    searchParams.set("page", totalPages.toString());
-    return redirect("/transactions?" + searchParams.toString());
-  }
 
   const allCategories = await db.query.category.findMany({
     columns: { name: true, id: true, keywords: true },
@@ -446,4 +407,64 @@ function SelectCategory({
 
 function toLocaleDateString(date: Date) {
   return formatISO9075(date, { representation: "date" });
+}
+
+// TODO: zodify
+function verifyAndSetDateSearchParams(searchParams: URLSearchParams): {
+  from: Date;
+  to: Date;
+} {
+  const fromDateSearchParam = searchParams.get("from");
+  const toDateSearchParam = searchParams.get("to");
+  const fromDate = fromDateSearchParam
+    ? startOfDay(new Date(fromDateSearchParam))
+    : undefined;
+  const toDate = toDateSearchParam
+    ? endOfDay(new Date(toDateSearchParam))
+    : undefined;
+
+  if (!fromDate || !toDate) {
+    const from = fromDate ?? startOfDay(new Date(addMonths(new Date(), -1)));
+    const to = toDate ?? endOfDay(new Date(addMonths(from, 1)));
+
+    searchParams.set("from", toLocaleDateString(from));
+    searchParams.set("to", toLocaleDateString(to));
+
+    throw redirect("/transactions?" + searchParams.toString());
+  }
+
+  if (isBefore(toDate, fromDate)) {
+    searchParams.set(
+      "to",
+      toLocaleDateString(endOfDay(addMonths(fromDate, 1))),
+    );
+    throw redirect("/transactions?" + searchParams.toString());
+  }
+
+  return { from: fromDate, to: toDate };
+}
+
+const pageSchema = z
+  .string()
+  .transform((arg) => parseInt(arg))
+  .nullable();
+
+function verifyAndSetPageSearchParams({
+  totalPages,
+  searchParams,
+}: {
+  totalPages: number;
+  searchParams: URLSearchParams;
+}): number {
+  const page = pageSchema.parse(searchParams.get("page")) ?? 1;
+
+  if (page < 1) {
+    searchParams.delete("page");
+    throw redirect("/transactions?" + searchParams.toString());
+  } else if (page > totalPages) {
+    searchParams.set("page", totalPages.toString());
+    throw redirect("/transactions?" + searchParams.toString());
+  }
+
+  return page;
 }
