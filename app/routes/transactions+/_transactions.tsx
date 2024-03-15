@@ -20,14 +20,8 @@ import {
   useReactTable,
   type ColumnDef,
 } from "@tanstack/react-table";
-import {
-  addMonths,
-  endOfDay,
-  formatISO9075,
-  isBefore,
-  startOfDay,
-} from "date-fns";
-import { and, desc, eq, gte, lte, sql } from "drizzle-orm";
+import { formatISO9075 } from "date-fns";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { route } from "routes-gen";
 import { z } from "zod";
 import { Button } from "~/components/ui/button";
@@ -70,13 +64,7 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
 
   const searchParams = new URL(request.url).searchParams;
 
-  const { from, to } = verifyAndSetDateSearchParams(searchParams);
-
-  const whereClause = and(
-    eq(transactionTable.userId, userId),
-    gte(transactionTable.valueDate, from),
-    lte(transactionTable.valueDate, to),
-  );
+  const whereClause = and(eq(transactionTable.userId, userId));
 
   const db = getDbFromContext(context);
   const [{ transactionCount }] = await db
@@ -407,41 +395,6 @@ function SelectCategory({
 
 function toLocaleDateString(date: Date) {
   return formatISO9075(date, { representation: "date" });
-}
-
-// TODO: zodify
-function verifyAndSetDateSearchParams(searchParams: URLSearchParams): {
-  from: Date;
-  to: Date;
-} {
-  const fromDateSearchParam = searchParams.get("from");
-  const toDateSearchParam = searchParams.get("to");
-  const fromDate = fromDateSearchParam
-    ? startOfDay(new Date(fromDateSearchParam))
-    : undefined;
-  const toDate = toDateSearchParam
-    ? endOfDay(new Date(toDateSearchParam))
-    : undefined;
-
-  if (!fromDate || !toDate) {
-    const from = fromDate ?? startOfDay(new Date(addMonths(new Date(), -1)));
-    const to = toDate ?? endOfDay(new Date(addMonths(from, 1)));
-
-    searchParams.set("from", toLocaleDateString(from));
-    searchParams.set("to", toLocaleDateString(to));
-
-    throw redirect("/transactions?" + searchParams.toString());
-  }
-
-  if (isBefore(toDate, fromDate)) {
-    searchParams.set(
-      "to",
-      toLocaleDateString(endOfDay(addMonths(fromDate, 1))),
-    );
-    throw redirect("/transactions?" + searchParams.toString());
-  }
-
-  return { from: fromDate, to: toDate };
 }
 
 const pageSchema = z
