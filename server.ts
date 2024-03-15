@@ -1,16 +1,13 @@
-import { AppLoadContext, Session, json, redirect } from "@remix-run/cloudflare";
-import {
-  createPagesFunctionHandlerParams,
-  createRequestHandler,
-} from "@remix-run/cloudflare-pages";
+import type { AppLoadContext, Session } from "@remix-run/cloudflare";
+import { json, redirect } from "@remix-run/cloudflare";
+import type { createPagesFunctionHandlerParams } from "@remix-run/cloudflare-pages";
+import { createRequestHandler } from "@remix-run/cloudflare-pages";
 import * as build from "@remix-run/dev/server-build";
 import { envSchema } from "env.server";
+import type { SpectacularJWTObtain } from "generated-sources/gocardless";
+import { TokenService } from "generated-sources/gocardless";
+import type { GoogleSession } from "~/lib/cookie.server";
 import {
-  SpectacularJWTObtain,
-  TokenService,
-} from "generated-sources/gocardless";
-import {
-  GoogleSession,
   createSessionStorage,
   goCardlessStorage,
   isAccessTokenValid,
@@ -40,7 +37,7 @@ export const onRequest: ReturnType<
       },
       {
         status: 500,
-      }
+      },
     );
   }
 
@@ -53,7 +50,7 @@ export const onRequest: ReturnType<
       },
       {
         status: 500,
-      }
+      },
     );
   }
 
@@ -62,7 +59,7 @@ export const onRequest: ReturnType<
   const session = await createSessionStorage(env.data).getSession(cookieHeader);
 
   const user: GoogleSession | null = session.get(
-    GoogleStrategy.authenticatorOptions.sessionKey
+    GoogleStrategy.authenticatorOptions.sessionKey,
   );
 
   const url = new URL(context.request.url);
@@ -108,7 +105,7 @@ export function createPagesFunctionHandler<Env = any>({
     try {
       response = await context.env.ASSETS.fetch(
         context.request.url,
-        context.request.clone()
+        context.request.clone(),
       );
       response =
         response && response.status >= 200 && response.status < 400
@@ -131,7 +128,7 @@ export function createPagesFunctionHandler<Env = any>({
 
       response.headers.append(
         "Set-Cookie",
-        await goCardlessStorage.commitSession(loadContext.goCardlessSession)
+        await goCardlessStorage.commitSession(loadContext.goCardlessSession),
       );
     }
 
@@ -157,7 +154,7 @@ export function createPagesFunctionHandler<Env = any>({
 }
 
 async function authorizeGoCardless(
-  context: AppLoadContext
+  context: AppLoadContext,
 ): Promise<Session<SpectacularJWTObtain>> {
   const session = context.goCardlessSession;
   // Access token not expired? Return session
