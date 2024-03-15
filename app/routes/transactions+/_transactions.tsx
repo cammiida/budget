@@ -12,16 +12,16 @@ import {
   useLoaderData,
   useNavigate,
   useNavigation,
-  useSearchParams,
   useSubmit,
 } from "@remix-run/react";
 import {
   getCoreRowModel,
   useReactTable,
   type ColumnDef,
+  getPaginationRowModel,
 } from "@tanstack/react-table";
 import { formatISO9075 } from "date-fns";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { route } from "routes-gen";
 import { z } from "zod";
 import { Button } from "~/components/ui/button";
@@ -52,8 +52,6 @@ export const transactionStringSchema = z.string().transform((arg) => {
     .parse(JSON.parse(arg));
 });
 
-const PAGE_SIZE = 10;
-
 export async function loader({ context, request }: LoaderFunctionArgs) {
   const dbApi = DbApi.create({ context });
   const userId = context.user?.id;
@@ -62,31 +60,15 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
     return redirect("/auth/login", { status: 401 });
   }
 
-  const searchParams = new URL(request.url).searchParams;
-
-  const whereClause = and(eq(transactionTable.userId, userId));
-
   const db = getDbFromContext(context);
-  const [{ transactionCount }] = await db
-    .select({ transactionCount: sql<number>`count(*)` })
-    .from(transactionTable)
-    .where(whereClause);
-
-  const totalPages =
-    transactionCount > 0 ? Math.ceil(transactionCount / PAGE_SIZE) : 1;
-  const page = verifyAndSetPageSearchParams({ totalPages, searchParams });
-  const offset = (page - 1) * PAGE_SIZE;
-
   const allCategories = await db.query.category.findMany({
     columns: { name: true, id: true, keywords: true },
     where: eq(category.userId, userId),
   });
 
   const transactions = await db.query.transaction.findMany({
-    where: whereClause,
+    where: and(eq(transactionTable.userId, userId)),
     orderBy: desc(transactionTable.valueDate),
-    limit: PAGE_SIZE,
-    offset,
     columns: {
       additionalInformation: true,
       amount: true,
@@ -107,13 +89,7 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
   );
 
   return json({
-    transactions: {
-      entries: transactions,
-      offset,
-      totalPages,
-      limit: PAGE_SIZE,
-      totalCount: transactionCount,
-    },
+    transactions,
     lastSavedTransactionDate,
     categories: allCategories,
   });
@@ -197,21 +173,6 @@ export default function Transactions() {
   const navigation = useNavigation();
 
   const isNavigating = navigation.state !== "idle";
-  const [searchParams, setSearchParams] = useSearchParams();
-
-  const currentPage = pageSchema.parse(searchParams.get("page")) ?? 1;
-  const canGoBack = !!currentPage && currentPage > 1;
-  const canGoForward = !currentPage || currentPage < transactions.totalPages;
-
-  function setPage(page: number) {
-    setSearchParams(
-      (prev) => {
-        prev.set("page", page.toString());
-        return prev;
-      },
-      { preventScrollReset: true },
-    );
-  }
 
   const columns: ColumnDef<ClientTransaction>[] = [
     {
@@ -273,9 +234,10 @@ export default function Transactions() {
   ];
 
   const table = useReactTable({
-    data: transactions.entries,
+    data: transactions,
     columns,
     getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
   });
 
   return (
@@ -290,41 +252,7 @@ export default function Transactions() {
         <h1 className="text-xl">Transactions</h1>
         <div className="flex items-center gap-2">
           <Button
-            variant="secondary"
-            disabled={!canGoBack}
-            onClick={() => setPage(1)}
-          >
-            {"<<"}
-          </Button>
-          <Button
-            variant="secondary"
-            disabled={!canGoBack}
-            onClick={() => setPage(currentPage - 1)}
-          >
-            {"<"}
-          </Button>
-          <span>{searchParams.get("page") ?? 1}</span>
-          <Button
-            variant="secondary"
-            disabled={!canGoForward}
-            onClick={() => setPage(currentPage + 1)}
-          >
-            {">"}
-          </Button>
-          <Button
-            variant="secondary"
-            disabled={!canGoForward}
-            onClick={() => setPage(transactions.totalPages)}
-          >
-            {">>"}
-          </Button>
-          <Button
-            onClick={() =>
-              navigate(
-                route("/transactions/suggest-categories") +
-                  `?${searchParams.toString()}`,
-              )
-            }
+            onClick={() => navigate(route("/transactions/suggest-categories"))}
           >
             Suggest categories
           </Button>
@@ -342,13 +270,13 @@ export default function Transactions() {
           </Form>
         </div>
       </div>
-      <DataTable table={table} />
+      <DataTable table={table} pagination />
     </div>
   );
 }
 
 export type Loader = typeof loader;
-type ClientTransaction = SerializeFrom<Loader>["transactions"]["entries"][0];
+type ClientTransaction = SerializeFrom<Loader>["transactions"][0];
 type ClientCategory = SerializeFrom<Loader>["categories"][0];
 
 function SelectCategory({
@@ -395,29 +323,4 @@ function SelectCategory({
 
 function toLocaleDateString(date: Date) {
   return formatISO9075(date, { representation: "date" });
-}
-
-const pageSchema = z
-  .string()
-  .transform((arg) => parseInt(arg))
-  .nullable();
-
-function verifyAndSetPageSearchParams({
-  totalPages,
-  searchParams,
-}: {
-  totalPages: number;
-  searchParams: URLSearchParams;
-}): number {
-  const page = pageSchema.parse(searchParams.get("page")) ?? 1;
-
-  if (page < 1) {
-    searchParams.delete("page");
-    throw redirect("/transactions?" + searchParams.toString());
-  } else if (page > totalPages) {
-    searchParams.set("page", totalPages.toString());
-    throw redirect("/transactions?" + searchParams.toString());
-  }
-
-  return page;
 }
