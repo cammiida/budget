@@ -1,4 +1,4 @@
-import type { Table as TableType } from "@tanstack/react-table";
+import type { HeaderContext, Table as TableType } from "@tanstack/react-table";
 import { flexRender } from "@tanstack/react-table";
 
 import {
@@ -10,6 +10,8 @@ import {
   TableRow,
 } from "~/components/ui/table";
 import { DataTablePagination } from "./data-table-pagination";
+import { Button } from "./button";
+import { ArrowUpDown } from "lucide-react";
 
 type DataTableProps<TData> = {
   table: TableType<TData>;
@@ -73,5 +75,23 @@ export function DataTable<TData>({ table, pagination }: DataTableProps<TData>) {
         </Table>
       </div>
     </>
+  );
+}
+
+export function SortableHeaderCell<TData, TValue>({
+  context: { column },
+  name,
+}: {
+  context: HeaderContext<TData, TValue>;
+  name: string;
+}) {
+  return (
+    <Button
+      variant="ghost"
+      onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+    >
+      {name}
+      <ArrowUpDown className="ml-2 h-4 w-4" />
+    </Button>
   );
 }

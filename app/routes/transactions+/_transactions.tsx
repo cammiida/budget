@@ -14,18 +14,19 @@ import {
   useNavigation,
   useSubmit,
 } from "@remix-run/react";
+import type { ColumnDef } from "@tanstack/react-table";
 import {
   getCoreRowModel,
-  useReactTable,
-  type ColumnDef,
   getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
 } from "@tanstack/react-table";
 import { formatISO9075 } from "date-fns";
 import { and, desc, eq } from "drizzle-orm";
 import { route } from "routes-gen";
 import { z } from "zod";
 import { Button } from "~/components/ui/button";
-import { DataTable } from "~/components/ui/data-table";
+import { DataTable, SortableHeaderCell } from "~/components/ui/data-table";
 import {
   Select,
   SelectContent,
@@ -177,7 +178,7 @@ export default function Transactions() {
   const columns: ColumnDef<ClientTransaction>[] = [
     {
       accessorKey: "bank.name",
-      header: "Bank",
+      header: (c) => <SortableHeaderCell context={c} name="Bank" />,
       cell: ({ row }) => {
         const bank = row.original.bank;
         return (
@@ -194,7 +195,7 @@ export default function Transactions() {
     },
     {
       accessorKey: "account.accountId",
-      header: "Account",
+      header: (c) => <SortableHeaderCell context={c} name="Account" />,
       cell: ({ row }) => {
         const account = row.original.account;
         return (
@@ -208,7 +209,7 @@ export default function Transactions() {
     },
     {
       accessorKey: "valueDate",
-      header: "Date",
+      header: (c) => <SortableHeaderCell context={c} name="Date" />,
       cell: ({ row }) => {
         const transaction = row.original;
         const date = transaction.valueDate ?? transaction.bookingDate;
@@ -238,6 +239,7 @@ export default function Transactions() {
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
   });
 
   return (
