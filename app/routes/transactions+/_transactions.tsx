@@ -20,7 +20,14 @@ import {
   useReactTable,
   type ColumnDef,
 } from "@tanstack/react-table";
-import { desc, eq, sql } from "drizzle-orm";
+import {
+  addMonths,
+  endOfDay,
+  formatISO9075,
+  isBefore,
+  startOfDay,
+} from "date-fns";
+import { and, desc, eq, gte, lte, sql } from "drizzle-orm";
 import { route } from "routes-gen";
 import { z } from "zod";
 import { Button } from "~/components/ui/button";
@@ -69,11 +76,45 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
   const searchParams = new URL(request.url).searchParams;
   const page = pageSchema.parse(searchParams.get("page")) ?? 1;
 
+  // TODO: zodify
+  const fromDateSearchParam = searchParams.get("from");
+  const toDateSearchParam = searchParams.get("to");
+  const fromDate = fromDateSearchParam
+    ? startOfDay(new Date(fromDateSearchParam))
+    : undefined;
+  const toDate = toDateSearchParam
+    ? endOfDay(new Date(toDateSearchParam))
+    : undefined;
+
+  if (!fromDate || !toDate) {
+    const from = fromDate ?? startOfDay(new Date(addMonths(new Date(), -1)));
+    const to = toDate ?? endOfDay(new Date(addMonths(from, 1)));
+
+    searchParams.set("from", toLocaleDateString(from));
+    searchParams.set("to", toLocaleDateString(to));
+
+    return redirect("/transactions?" + searchParams.toString());
+  }
+
+  if (isBefore(toDate, fromDate)) {
+    searchParams.set(
+      "to",
+      toLocaleDateString(endOfDay(addMonths(fromDate, 1))),
+    );
+    return redirect("/transactions?" + searchParams.toString());
+  }
+
+  const whereClause = and(
+    eq(transactionTable.userId, userId),
+    gte(transactionTable.valueDate, fromDate),
+    lte(transactionTable.valueDate, toDate),
+  );
+
   const db = getDbFromContext(context);
   const [{ transactionCount }] = await db
     .select({ transactionCount: sql<number>`count(*)` })
     .from(transactionTable)
-    .where(eq(transactionTable.userId, userId));
+    .where(whereClause);
 
   const totalPages =
     transactionCount > 0 ? Math.ceil(transactionCount / PAGE_SIZE) : 1;
@@ -93,7 +134,7 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
   });
 
   const transactions = await db.query.transaction.findMany({
-    where: eq(transactionTable.userId, userId),
+    where: whereClause,
     orderBy: desc(transactionTable.valueDate),
     limit: PAGE_SIZE,
     offset,
@@ -112,11 +153,9 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
     },
   });
 
-  const lastSavedTransactionDate = (
-    await dbApi.getLatestTransactionDate()
-  )?.date
-    ?.toISOString()
-    .split("T")[0];
+  const lastSavedTransactionDate = toLocaleDateString(
+    (await dbApi.getLatestTransactionDate())?.date ?? new Date(),
+  );
 
   return json({
     transactions: {
@@ -403,4 +442,8 @@ function SelectCategory({
       </SelectContent>
     </Select>
   );
+}
+
+function toLocaleDateString(date: Date) {
+  return formatISO9075(date, { representation: "date" });
 }
