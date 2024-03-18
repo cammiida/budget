@@ -17,16 +17,25 @@ import {
 import type { ColumnDef } from "@tanstack/react-table";
 import {
   getCoreRowModel,
+  getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
 import { formatISO9075 } from "date-fns";
 import { and, desc, eq } from "drizzle-orm";
+import { ListFilter } from "lucide-react";
 import { route } from "routes-gen";
 import { z } from "zod";
 import { Button } from "~/components/ui/button";
+import { Checkbox } from "~/components/ui/checkbox";
 import { DataTable, SortableHeaderCell } from "~/components/ui/data-table";
+import { Label } from "~/components/ui/label";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "~/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -34,6 +43,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
+import { LargeText } from "~/components/ui/typography";
 import { getDbFromContext } from "~/lib/db.service.server";
 import { DbApi } from "~/lib/dbApi";
 import { GoCardlessApi } from "~/lib/gocardless-api.server";
@@ -53,7 +63,7 @@ export const transactionStringSchema = z.string().transform((arg) => {
     .parse(JSON.parse(arg));
 });
 
-export async function loader({ context, request }: LoaderFunctionArgs) {
+export async function loader({ context }: LoaderFunctionArgs) {
   const dbApi = DbApi.create({ context });
   const userId = context.user?.id;
 
@@ -175,8 +185,10 @@ export default function Transactions() {
 
   const isNavigating = navigation.state !== "idle";
 
+  const uniqueBanks = new Set(transactions.map((t) => t.bank.name));
   const columns: ColumnDef<ClientTransaction>[] = [
     {
+      id: "bank",
       accessorKey: "bank.name",
       header: (c) => <SortableHeaderCell context={c} name="Bank" />,
       cell: ({ row }) => {
@@ -192,6 +204,7 @@ export default function Transactions() {
           </>
         );
       },
+      filterFn: "arrIncludesSome",
     },
     {
       accessorKey: "account.accountId",
@@ -240,6 +253,10 @@ export default function Transactions() {
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    initialState: {
+      columnFilters: [{ id: "bank", value: [...uniqueBanks] }],
+    },
   });
 
   return (
@@ -272,6 +289,44 @@ export default function Transactions() {
           </Form>
         </div>
       </div>
+      <Popover>
+        <PopoverTrigger>
+          <Button className="h-8 w-8 p-0 lg:flex" variant="outline">
+            <ListFilter className="h-4 w-4" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent>
+          <div className="relative left-5 flex flex-col py-4">
+            <ul className="flex flex-col gap-2">
+              <LargeText>Banks</LargeText>
+              {[...uniqueBanks].map((bank) => {
+                const column = table.getColumn("bank");
+                const filterValues = column?.getFilterValue() as
+                  | string[]
+                  | undefined;
+                const isChecked = !!filterValues?.includes(bank);
+
+                return (
+                  <li key={bank} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={bank}
+                      checked={isChecked}
+                      onClick={() => {
+                        const newFilterValue = isChecked
+                          ? filterValues?.filter((v) => v !== bank) ?? []
+                          : [...new Set([...(filterValues ?? []), bank])];
+
+                        column?.setFilterValue(newFilterValue);
+                      }}
+                    />
+                    <Label htmlFor="terms">{bank}</Label>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        </PopoverContent>
+      </Popover>
       <DataTable table={table} pagination />
     </div>
   );
