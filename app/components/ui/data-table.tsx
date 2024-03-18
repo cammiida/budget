@@ -1,6 +1,8 @@
 import type { HeaderContext, Table as TableType } from "@tanstack/react-table";
 import { flexRender } from "@tanstack/react-table";
 
+import { ArrowUpDown } from "lucide-react";
+import type { PropsWithChildren } from "react";
 import {
   Table,
   TableBody,
@@ -9,20 +11,24 @@ import {
   TableHeader,
   TableRow,
 } from "~/components/ui/table";
-import { DataTablePagination } from "./data-table-pagination";
 import { Button } from "./button";
-import { ArrowUpDown } from "lucide-react";
+import { DataTablePagination } from "./data-table-pagination";
 
 type DataTableProps<TData> = {
   table: TableType<TData>;
   pagination?: boolean;
 };
 
-export function DataTable<TData>({ table, pagination }: DataTableProps<TData>) {
+export function DataTable<TData>({
+  table,
+  pagination,
+  children,
+}: PropsWithChildren<DataTableProps<TData>>) {
   return (
     <>
-      <div className="py-4">
+      <div className="flex items-center justify-end space-x-6 px-2 py-4 lg:space-x-8">
         {pagination && <DataTablePagination table={table} />}
+        {children}
       </div>
       <div className="rounded-md border">
         <Table>

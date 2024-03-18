@@ -1,9 +1,9 @@
-import { AppLoadContext } from "@remix-run/cloudflare";
+import type { AppLoadContext } from "@remix-run/cloudflare";
 import { drizzle } from "drizzle-orm/d1";
 import * as schema from "./schema";
 
 const contextWithDb = (
-  context: Record<string, unknown>
+  context: Record<string, unknown>,
 ): context is { db: D1Database } => {
   return "db" in context;
 };
