@@ -14,7 +14,7 @@ import {
   useNavigation,
   useSubmit,
 } from "@remix-run/react";
-import type { ColumnDef, Table } from "@tanstack/react-table";
+import type { Column, ColumnDef } from "@tanstack/react-table";
 import {
   getCoreRowModel,
   getFilteredRowModel,
@@ -296,78 +296,20 @@ export default function Transactions() {
 
       <DataTable table={table} pagination>
         <DataTableFilter>
-          <FilterContent
-            table={table}
-            uniqueBanks={uniqueBanks}
-            uniqueAccountNames={uniqueAccountNames}
-          />
+          <div className="relative flex flex-col gap-6 p-2">
+            <CheckBoxFilterGroup
+              header="Banks"
+              column={table.getColumn("bank")}
+              values={[...uniqueBanks]}
+            />
+            <CheckBoxFilterGroup
+              header="Accounts"
+              column={table.getColumn("account")}
+              values={[...uniqueAccountNames]}
+            />
+          </div>
         </DataTableFilter>
       </DataTable>
-    </div>
-  );
-}
-
-function FilterContent<TData>({
-  table,
-  uniqueBanks,
-  uniqueAccountNames,
-}: {
-  table: Table<TData>;
-  uniqueBanks: Set<string>;
-  uniqueAccountNames: Set<string>;
-}) {
-  return (
-    <div className="relative flex flex-col gap-6 p-2">
-      <ul className="flex flex-col gap-2">
-        <LargeText>Banks</LargeText>
-        {[...uniqueBanks].map((bank) => {
-          const column = table.getColumn("bank");
-          const filterValues = column?.getFilterValue() as string[] | undefined;
-          const isChecked = !!filterValues?.includes(bank);
-
-          return (
-            <li key={bank} className="flex items-center space-x-2">
-              <Checkbox
-                id={bank}
-                checked={isChecked}
-                onClick={() => {
-                  const newFilterValue = isChecked
-                    ? filterValues?.filter((v) => v !== bank) ?? []
-                    : [...new Set([...(filterValues ?? []), bank])];
-
-                  column?.setFilterValue(newFilterValue);
-                }}
-              />
-              <Label htmlFor="terms">{bank}</Label>
-            </li>
-          );
-        })}
-      </ul>
-      <ul className="flex flex-col gap-2">
-        <LargeText>Accounts</LargeText>
-        {[...uniqueAccountNames].map((accountName) => {
-          const column = table.getColumn("account");
-          const filterValues = column?.getFilterValue() as string[] | undefined;
-          const isChecked = !!filterValues?.includes(accountName);
-
-          return (
-            <li key={accountName} className="flex items-center space-x-2">
-              <Checkbox
-                id={accountName}
-                checked={isChecked}
-                onClick={() => {
-                  const newFilterValue = isChecked
-                    ? filterValues?.filter((v) => v !== accountName) ?? []
-                    : [...new Set([...(filterValues ?? []), accountName])];
-
-                  column?.setFilterValue(newFilterValue);
-                }}
-              />
-              <Label htmlFor="terms">{accountName}</Label>
-            </li>
-          );
-        })}
-      </ul>
     </div>
   );
 }
@@ -415,6 +357,45 @@ function SelectCategory({
         ))}
       </SelectContent>
     </Select>
+  );
+}
+
+type CheckBoxFilterGroupProps<TData> = {
+  header: string;
+  column: Column<TData> | undefined;
+  values: string[];
+};
+
+function CheckBoxFilterGroup<TData>(props: CheckBoxFilterGroupProps<TData>) {
+  const { header, column, values } = props;
+
+  return (
+    <div className="flex flex-col gap-2">
+      <LargeText>{header}</LargeText>
+      <ul className="flex flex-col gap-2">
+        {values.map((value) => {
+          const filterValues = column?.getFilterValue() as string[] | undefined;
+          const isChecked = !!filterValues?.includes(value);
+
+          return (
+            <div key={value} className="flex items-center space-x-2">
+              <Checkbox
+                id={value}
+                checked={isChecked}
+                onClick={() => {
+                  const newFilterValue = isChecked
+                    ? filterValues?.filter((v) => v !== value) ?? []
+                    : [...new Set([...(filterValues ?? []), value])];
+
+                  column?.setFilterValue(newFilterValue);
+                }}
+              />
+              <Label htmlFor="terms">{value}</Label>
+            </div>
+          );
+        })}
+      </ul>
+    </div>
   );
 }
 
