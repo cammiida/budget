@@ -25,6 +25,7 @@ import {
 } from "@tanstack/react-table";
 import { formatISO9075 } from "date-fns";
 import { and, desc, eq } from "drizzle-orm";
+import { RefreshCw } from "lucide-react";
 import { route } from "routes-gen";
 import { z } from "zod";
 import { Button } from "~/components/ui/button";
@@ -292,7 +293,12 @@ export default function Transactions() {
               />
             )}
             <input readOnly hidden name="intent" value="sync" />
-            <Button disabled={isNavigating}>Sync transactions</Button>
+            <Button disabled={isNavigating} className="flex gap-2">
+              <RefreshCw
+                className={`h-4 w-4 ${isNavigating && "animate-spin"}`}
+              />
+              Sync transactions
+            </Button>
           </Form>
         </div>
       </div>
