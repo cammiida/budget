@@ -26,12 +26,15 @@ import {
 import { formatISO9075 } from "date-fns";
 import { and, desc, eq } from "drizzle-orm";
 import { RefreshCw } from "lucide-react";
+import { useState } from "react";
 import { route } from "routes-gen";
 import { z } from "zod";
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
 import { DataTable, SortableHeaderCell } from "~/components/ui/data-table";
 import { DataTableFilter } from "~/components/ui/data-table-filter";
+import { DataTablePagination } from "~/components/ui/data-table-pagination";
+import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import {
   Select,
@@ -182,11 +185,11 @@ export default function Transactions() {
 
   const isNavigating = navigation.state !== "idle";
 
+  const [globalFilter, setGlobalFilter] = useState("");
   const uniqueBanks = new Set(transactions.map((t) => t.bank.name));
   const uniqueAccountNames = new Set(
     transactions.map((t) => prettifyAccountName(t.account.name)),
   );
-
   filterFns.arrIncludesSome.autoRemove = () => false;
 
   const columns: ColumnDef<ClientTransaction>[] = [
@@ -259,11 +262,16 @@ export default function Transactions() {
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    onGlobalFilterChange: setGlobalFilter,
+    globalFilterFn: "includesString",
     initialState: {
       columnFilters: [
         { id: "bank", value: [...uniqueBanks] },
         { id: "account", value: [...uniqueAccountNames] },
       ],
+    },
+    state: {
+      globalFilter,
     },
   });
 
@@ -303,7 +311,14 @@ export default function Transactions() {
         </div>
       </div>
 
-      <DataTable table={table} pagination>
+      <DataTable table={table}>
+        <Input
+          placeholder="Filter transactions..."
+          value={globalFilter}
+          onChange={(event) => setGlobalFilter(event.target.value)}
+          className="float-start max-w-sm"
+        />
+        <DataTablePagination table={table} />
         <DataTableFilter>
           <div className="relative flex flex-col gap-6 p-2">
             <CheckBoxFilterGroup

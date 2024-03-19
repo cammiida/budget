@@ -12,22 +12,18 @@ import {
   TableRow,
 } from "~/components/ui/table";
 import { Button } from "./button";
-import { DataTablePagination } from "./data-table-pagination";
 
 type DataTableProps<TData> = {
   table: TableType<TData>;
-  pagination?: boolean;
 };
 
 export function DataTable<TData>({
   table,
-  pagination,
   children,
 }: PropsWithChildren<DataTableProps<TData>>) {
   return (
     <>
       <div className="flex items-center justify-end space-x-6 px-2 py-4 lg:space-x-8">
-        {pagination && <DataTablePagination table={table} />}
         {children}
       </div>
       <div className="rounded-md border">
