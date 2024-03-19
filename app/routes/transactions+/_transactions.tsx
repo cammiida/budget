@@ -16,6 +16,7 @@ import {
 } from "@remix-run/react";
 import type { Column, ColumnDef } from "@tanstack/react-table";
 import {
+  filterFns,
   getCoreRowModel,
   getFilteredRowModel,
   getPaginationRowModel,
@@ -184,6 +185,8 @@ export default function Transactions() {
   const uniqueAccountNames = new Set(
     transactions.map((t) => prettifyAccountName(t.account.name)),
   );
+
+  filterFns.arrIncludesSome.autoRemove = () => false;
 
   const columns: ColumnDef<ClientTransaction>[] = [
     {
