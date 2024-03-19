@@ -181,6 +181,10 @@ export default function Transactions() {
   const isNavigating = navigation.state !== "idle";
 
   const uniqueBanks = new Set(transactions.map((t) => t.bank.name));
+  const uniqueAccountNames = new Set(
+    transactions.map((t) => prettifyAccountName(t.account.name)),
+  );
+
   const columns: ColumnDef<ClientTransaction>[] = [
     {
       id: "bank",
@@ -202,7 +206,8 @@ export default function Transactions() {
       filterFn: "arrIncludesSome",
     },
     {
-      accessorKey: "account.accountId",
+      id: "account",
+      accessorFn: (row) => prettifyAccountName(row.account?.name ?? ""),
       header: (c) => <SortableHeaderCell context={c} name="Account" />,
       cell: ({ row }) => {
         const account = row.original.account;
@@ -210,10 +215,11 @@ export default function Transactions() {
           <>
             <small>{account?.bban}</small>
             <br />
-            {account?.name.split(",").slice(0, -1).join(", ")}
+            {prettifyAccountName(account?.name ?? "")}
           </>
         );
       },
+      filterFn: "arrIncludesSome",
     },
     {
       accessorKey: "valueDate",
@@ -250,7 +256,10 @@ export default function Transactions() {
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     initialState: {
-      columnFilters: [{ id: "bank", value: [...uniqueBanks] }],
+      columnFilters: [
+        { id: "bank", value: [...uniqueBanks] },
+        { id: "account", value: [...uniqueAccountNames] },
+      ],
     },
   });
 
@@ -287,7 +296,11 @@ export default function Transactions() {
 
       <DataTable table={table} pagination>
         <DataTableFilter>
-          <FilterContent table={table} uniqueBanks={uniqueBanks} />
+          <FilterContent
+            table={table}
+            uniqueBanks={uniqueBanks}
+            uniqueAccountNames={uniqueAccountNames}
+          />
         </DataTableFilter>
       </DataTable>
     </div>
@@ -297,12 +310,14 @@ export default function Transactions() {
 function FilterContent<TData>({
   table,
   uniqueBanks,
+  uniqueAccountNames,
 }: {
   table: Table<TData>;
   uniqueBanks: Set<string>;
+  uniqueAccountNames: Set<string>;
 }) {
   return (
-    <div className="relative left-5 flex flex-col py-4">
+    <div className="relative flex flex-col gap-6 p-2">
       <ul className="flex flex-col gap-2">
         <LargeText>Banks</LargeText>
         {[...uniqueBanks].map((bank) => {
@@ -324,6 +339,31 @@ function FilterContent<TData>({
                 }}
               />
               <Label htmlFor="terms">{bank}</Label>
+            </li>
+          );
+        })}
+      </ul>
+      <ul className="flex flex-col gap-2">
+        <LargeText>Accounts</LargeText>
+        {[...uniqueAccountNames].map((accountName) => {
+          const column = table.getColumn("account");
+          const filterValues = column?.getFilterValue() as string[] | undefined;
+          const isChecked = !!filterValues?.includes(accountName);
+
+          return (
+            <li key={accountName} className="flex items-center space-x-2">
+              <Checkbox
+                id={accountName}
+                checked={isChecked}
+                onClick={() => {
+                  const newFilterValue = isChecked
+                    ? filterValues?.filter((v) => v !== accountName) ?? []
+                    : [...new Set([...(filterValues ?? []), accountName])];
+
+                  column?.setFilterValue(newFilterValue);
+                }}
+              />
+              <Label htmlFor="terms">{accountName}</Label>
             </li>
           );
         })}
@@ -380,4 +420,11 @@ function SelectCategory({
 
 function toLocaleDateString(date: Date) {
   return formatISO9075(date, { representation: "date" });
+}
+
+function prettifyAccountName(name: string) {
+  const split = name.split(",");
+  if (split.length === 1) return name;
+
+  return split.slice(0, -1).join(", ");
 }
