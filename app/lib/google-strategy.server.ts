@@ -5,10 +5,10 @@ import type {
   OAuth2StrategyVerifyParams,
 } from "remix-auth-oauth2";
 import { OAuth2Strategy } from "remix-auth-oauth2";
-import { GoogleSession } from "./cookie.server";
+import type { GoogleSession } from "./cookie.server";
 import { getDbFromContext } from "./db.service.server";
-import { user } from "./schema";
-import { ServerArgs } from "./types";
+import { users } from "./schema";
+import type { ServerArgs } from "./types";
 
 export function createGoogleStrategy(args: ServerArgs) {
   const url = new URL(args.request.url);
@@ -31,8 +31,8 @@ export function createGoogleStrategy(args: ServerArgs) {
 
       const existingUser = await db
         .select()
-        .from(user)
-        .where(eq(user.email, email))
+        .from(users)
+        .where(eq(users.email, email))
         .limit(1)
         .get();
 
@@ -48,7 +48,7 @@ export function createGoogleStrategy(args: ServerArgs) {
       }
 
       throw new Error("You are not authorized to access this site");
-    }
+    },
   );
 }
 
@@ -151,7 +151,7 @@ export class GoogleStrategy<User> extends OAuth2Strategy<
     verify: StrategyVerifyCallback<
       User,
       OAuth2StrategyVerifyParams<GoogleProfile, GoogleExtraParams>
-    >
+    >,
   ) {
     super(
       {
@@ -161,7 +161,7 @@ export class GoogleStrategy<User> extends OAuth2Strategy<
         authorizationURL: "https://accounts.google.com/o/oauth2/v2/auth",
         tokenURL: "https://oauth2.googleapis.com/token",
       },
-      verify
+      verify,
     );
     this.scope = this.parseScope(scope);
     this.accessType = accessType ?? "online";

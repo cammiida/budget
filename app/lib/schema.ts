@@ -13,8 +13,8 @@ import { createInsertSchema } from "drizzle-zod";
 import type { BalanceSchema } from "generated-sources/gocardless";
 import { z } from "zod";
 
-export const user = sqliteTable(
-  "user",
+export const users = sqliteTable(
+  "Users",
   {
     id: integer("id").primaryKey({
       autoIncrement: true,
@@ -27,22 +27,22 @@ export const user = sqliteTable(
   }),
 );
 
-export const userRelations = relations(user, ({ many }) => ({
-  banks: many(bank),
-  accounts: many(account),
-  categories: many(category),
-  transactions: many(transaction),
+export type User = InferSelectModel<typeof users>;
+export type NewUser = InferInsertModel<typeof users>;
+
+export const userRelations = relations(users, ({ many }) => ({
+  banks: many(banks),
+  accounts: many(accounts),
+  categories: many(categories),
+  transactions: many(bankTransactions),
 }));
 
-export type User = InferSelectModel<typeof user>;
-export type NewUser = InferInsertModel<typeof user>;
-
-export const bank = sqliteTable(
-  "bank",
+export const banks = sqliteTable(
+  "Banks",
   {
     bankId: text("bank_id").notNull(),
     userId: integer("user_id")
-      .references(() => user.id, { onDelete: "cascade" })
+      .references(() => users.id, { onDelete: "cascade" })
       .notNull(),
     name: text("name").notNull(),
     requisitionId: text("requisition_id"),
@@ -54,25 +54,25 @@ export const bank = sqliteTable(
   }),
 );
 
-export const bankRelations = relations(bank, ({ one, many }) => ({
-  user: one(user, {
-    fields: [bank.userId],
-    references: [user.id],
+export type Bank = InferSelectModel<typeof banks>;
+export type NewBank = InferInsertModel<typeof banks>;
+
+export const bankRelations = relations(banks, ({ one, many }) => ({
+  user: one(users, {
+    fields: [banks.userId],
+    references: [users.id],
   }),
-  accounts: many(account),
-  transactions: many(transaction),
+  accounts: many(accounts),
+  transactions: many(bankTransactions),
 }));
 
-export type Bank = InferSelectModel<typeof bank>;
-export type NewBank = InferInsertModel<typeof bank>;
-
-export const account = sqliteTable(
-  "account",
+export const accounts = sqliteTable(
+  "Accounts",
   {
     accountId: text("account_id").notNull(),
     userId: integer("user_id")
       .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
+      .references(() => users.id, { onDelete: "cascade" }),
     bankId: text("bank_id").notNull(),
     bban: text("bban"),
     name: text("name").notNull(),
@@ -84,7 +84,7 @@ export const account = sqliteTable(
   (account) => ({
     bankReference: foreignKey({
       columns: [account.userId, account.bankId],
-      foreignColumns: [bank.userId, bank.bankId],
+      foreignColumns: [banks.userId, banks.bankId],
       name: "bankReference",
     }).onDelete("cascade"),
     pk: primaryKey({
@@ -93,27 +93,27 @@ export const account = sqliteTable(
   }),
 );
 
-export const accountRelations = relations(account, ({ one, many }) => ({
-  bank: one(bank, {
-    fields: [account.userId, account.bankId],
-    references: [bank.userId, bank.bankId],
+export type Account = InferSelectModel<typeof accounts>;
+export type NewAccount = InferInsertModel<typeof accounts>;
+
+export const accountRelations = relations(accounts, ({ one, many }) => ({
+  bank: one(banks, {
+    fields: [accounts.userId, accounts.bankId],
+    references: [banks.userId, banks.bankId],
   }),
-  user: one(user, {
-    fields: [account.userId],
-    references: [user.id],
+  user: one(users, {
+    fields: [accounts.userId],
+    references: [users.id],
   }),
-  transactions: many(transaction),
+  transactions: many(bankTransactions),
 }));
 
-export type Account = InferSelectModel<typeof account>;
-export type NewAccount = InferInsertModel<typeof account>;
-
-export const category = sqliteTable(
-  "category",
+export const categories = sqliteTable(
+  "Categories",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
     userId: integer("user_id")
-      .references(() => user.id, { onDelete: "cascade" })
+      .references(() => users.id, { onDelete: "cascade" })
       .notNull(),
     name: text("name").notNull(),
     color: text("color"),
@@ -124,18 +124,18 @@ export const category = sqliteTable(
   }),
 );
 
-export const categoryRelations = relations(category, ({ one, many }) => ({
-  user: one(user, {
-    fields: [category.userId],
-    references: [user.id],
+export type Category = InferSelectModel<typeof categories>;
+export type NewCategory = InferInsertModel<typeof categories>;
+
+export const categoryRelations = relations(categories, ({ one, many }) => ({
+  user: one(users, {
+    fields: [categories.userId],
+    references: [users.id],
   }),
-  transactions: many(transaction),
+  transactions: many(bankTransactions),
 }));
 
-export type Category = InferSelectModel<typeof category>;
-export type NewCategory = InferInsertModel<typeof category>;
-
-export const createCategory = createInsertSchema(category, {
+export const createCategory = createInsertSchema(categories, {
   userId: z.number().optional(),
   keywords: z
     .string()
@@ -159,16 +159,16 @@ const timestamp = customType<{
   },
 });
 
-export const transaction = sqliteTable(
-  "transaction",
+export const bankTransactions = sqliteTable(
+  "BankTransactions",
   {
     transactionId: text("transaction_id").notNull(),
     userId: integer("user_id")
       .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
+      .references(() => users.id, { onDelete: "cascade" }),
     bankId: text("bank_id").notNull(),
     accountId: text("account_id").notNull(),
-    categoryId: integer("category_id").references(() => category.id, {
+    categoryId: integer("category_id").references(() => categories.id, {
       onDelete: "set null",
     }),
     status: text("status").$type<"booked" | "pending">().notNull(),
@@ -190,7 +190,7 @@ export const transaction = sqliteTable(
   (transaction) => ({
     accountReference: foreignKey({
       columns: [transaction.userId, transaction.bankId, transaction.accountId],
-      foreignColumns: [account.userId, account.bankId, account.accountId],
+      foreignColumns: [accounts.userId, accounts.bankId, accounts.accountId],
     }).onDelete("cascade"),
     pk: primaryKey({
       columns: [
@@ -202,24 +202,28 @@ export const transaction = sqliteTable(
   }),
 );
 
-export const transactionRelations = relations(transaction, ({ one }) => ({
-  bank: one(bank, {
-    fields: [transaction.userId, transaction.bankId],
-    references: [bank.userId, bank.bankId],
+export type Transaction = InferSelectModel<typeof bankTransactions>;
+export type NewTransaction = InferInsertModel<typeof bankTransactions>;
+
+export const transactionRelations = relations(bankTransactions, ({ one }) => ({
+  bank: one(banks, {
+    fields: [bankTransactions.userId, bankTransactions.bankId],
+    references: [banks.userId, banks.bankId],
   }),
-  account: one(account, {
-    fields: [transaction.userId, transaction.bankId, transaction.accountId],
-    references: [account.userId, account.bankId, account.accountId],
+  account: one(accounts, {
+    fields: [
+      bankTransactions.userId,
+      bankTransactions.bankId,
+      bankTransactions.accountId,
+    ],
+    references: [accounts.userId, accounts.bankId, accounts.accountId],
   }),
-  category: one(category, {
-    fields: [transaction.categoryId, transaction.userId],
-    references: [category.id, category.userId],
+  category: one(categories, {
+    fields: [bankTransactions.categoryId, bankTransactions.userId],
+    references: [categories.id, categories.userId],
   }),
-  user: one(user, {
-    fields: [transaction.userId],
-    references: [user.id],
+  user: one(users, {
+    fields: [bankTransactions.userId],
+    references: [users.id],
   }),
 }));
-
-export type Transaction = InferSelectModel<typeof transaction>;
-export type NewTransaction = InferInsertModel<typeof transaction>;

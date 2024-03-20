@@ -1,7 +1,7 @@
-CREATE TABLE IF NOT EXISTS `user` (
+CREATE TABLE IF NOT EXISTS `Users` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`email` text NOT NULL,
 	`name` text
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX IF NOT EXISTS `emailIdx` ON `user` (`email`);
+CREATE UNIQUE INDEX `emailIdx` ON `Users` (`email`);

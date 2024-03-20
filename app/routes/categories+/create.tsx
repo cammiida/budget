@@ -5,7 +5,7 @@ import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import Modal from "~/components/ui/modal";
 import { getDbFromContext } from "~/lib/db.service.server";
-import { category, createCategory } from "~/lib/schema";
+import { categories, createCategory } from "~/lib/schema";
 
 export async function action({ request, context }: ActionFunctionArgs) {
   const formData = await request.formData();
@@ -21,7 +21,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
   }
 
   const createdCategory = await db
-    .insert(category)
+    .insert(categories)
     .values({ ...data, userId })
     .onConflictDoNothing();
 

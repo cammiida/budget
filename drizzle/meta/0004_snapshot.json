@@ -1,11 +1,11 @@
 {
   "version": "5",
   "dialect": "sqlite",
-  "id": "dfc75de2-20b6-4c93-97d6-57a9bc490980",
-  "prevId": "7ee721fc-d3ae-4f5e-ac50-2126935a0caa",
+  "id": "8372cb63-2931-4831-b723-6fd53ec16069",
+  "prevId": "06a52fed-56e2-4ce4-8ed9-539e11e7aef9",
   "tables": {
-    "account": {
-      "name": "account",
+    "Accounts": {
+      "name": "Accounts",
       "columns": {
         "account_id": {
           "name": "account_id",
@@ -26,6 +26,13 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true,
+          "autoincrement": false
+        },
+        "bban": {
+          "name": "bban",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
           "autoincrement": false
         },
         "name": {
@@ -52,10 +59,10 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "account_user_id_user_id_fk": {
-          "name": "account_user_id_user_id_fk",
-          "tableFrom": "account",
-          "tableTo": "user",
+        "Accounts_user_id_Users_id_fk": {
+          "name": "Accounts_user_id_Users_id_fk",
+          "tableFrom": "Accounts",
+          "tableTo": "Users",
           "columnsFrom": [
             "user_id"
           ],
@@ -67,8 +74,8 @@
         },
         "bankReference": {
           "name": "bankReference",
-          "tableFrom": "account",
-          "tableTo": "bank",
+          "tableFrom": "Accounts",
+          "tableTo": "Banks",
           "columnsFrom": [
             "user_id",
             "bank_id"
@@ -82,19 +89,193 @@
         }
       },
       "compositePrimaryKeys": {
-        "account_user_id_bank_id_account_id_pk": {
+        "Accounts_user_id_bank_id_account_id_pk": {
           "columns": [
             "account_id",
             "bank_id",
             "user_id"
           ],
-          "name": "account_user_id_bank_id_account_id_pk"
+          "name": "Accounts_user_id_bank_id_account_id_pk"
         }
       },
       "uniqueConstraints": {}
     },
-    "bank": {
-      "name": "bank",
+    "BankTransactions": {
+      "name": "BankTransactions",
+      "columns": {
+        "transaction_id": {
+          "name": "transaction_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "bank_id": {
+          "name": "bank_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "category_id": {
+          "name": "category_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "booking_date": {
+          "name": "booking_date",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "value_date": {
+          "name": "value_date",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "amount": {
+          "name": "amount",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "currency": {
+          "name": "currency",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "exchange_rate": {
+          "name": "exchange_rate",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "creditor_name": {
+          "name": "creditor_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "creditor_bban": {
+          "name": "creditor_bban",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "debtor_name": {
+          "name": "debtor_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "debtor_bban": {
+          "name": "debtor_bban",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "additional_information": {
+          "name": "additional_information",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "BankTransactions_user_id_Users_id_fk": {
+          "name": "BankTransactions_user_id_Users_id_fk",
+          "tableFrom": "BankTransactions",
+          "tableTo": "Users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "BankTransactions_category_id_Categories_id_fk": {
+          "name": "BankTransactions_category_id_Categories_id_fk",
+          "tableFrom": "BankTransactions",
+          "tableTo": "Categories",
+          "columnsFrom": [
+            "category_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "BankTransactions_user_id_bank_id_account_id_Accounts_user_id_bank_id_account_id_fk": {
+          "name": "BankTransactions_user_id_bank_id_account_id_Accounts_user_id_bank_id_account_id_fk",
+          "tableFrom": "BankTransactions",
+          "tableTo": "Accounts",
+          "columnsFrom": [
+            "user_id",
+            "bank_id",
+            "account_id"
+          ],
+          "columnsTo": [
+            "user_id",
+            "bank_id",
+            "account_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "BankTransactions_transaction_id_account_id_user_id_pk": {
+          "columns": [
+            "account_id",
+            "transaction_id",
+            "user_id"
+          ],
+          "name": "BankTransactions_transaction_id_account_id_user_id_pk"
+        }
+      },
+      "uniqueConstraints": {}
+    },
+    "Banks": {
+      "name": "Banks",
       "columns": {
         "bank_id": {
           "name": "bank_id",
@@ -141,10 +322,10 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "bank_user_id_user_id_fk": {
-          "name": "bank_user_id_user_id_fk",
-          "tableFrom": "bank",
-          "tableTo": "user",
+        "Banks_user_id_Users_id_fk": {
+          "name": "Banks_user_id_Users_id_fk",
+          "tableFrom": "Banks",
+          "tableTo": "Users",
           "columnsFrom": [
             "user_id"
           ],
@@ -156,18 +337,18 @@
         }
       },
       "compositePrimaryKeys": {
-        "bank_bank_id_user_id_pk": {
+        "Banks_bank_id_user_id_pk": {
           "columns": [
             "bank_id",
             "user_id"
           ],
-          "name": "bank_bank_id_user_id_pk"
+          "name": "Banks_bank_id_user_id_pk"
         }
       },
       "uniqueConstraints": {}
     },
-    "category": {
-      "name": "category",
+    "Categories": {
+      "name": "Categories",
       "columns": {
         "id": {
           "name": "id",
@@ -196,6 +377,13 @@
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
+        },
+        "keywords": {
+          "name": "keywords",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {
@@ -209,10 +397,10 @@
         }
       },
       "foreignKeys": {
-        "category_user_id_user_id_fk": {
-          "name": "category_user_id_user_id_fk",
-          "tableFrom": "category",
-          "tableTo": "user",
+        "Categories_user_id_Users_id_fk": {
+          "name": "Categories_user_id_Users_id_fk",
+          "tableFrom": "Categories",
+          "tableTo": "Users",
           "columnsFrom": [
             "user_id"
           ],
@@ -226,154 +414,8 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "transaction": {
-      "name": "transaction",
-      "columns": {
-        "transaction_id": {
-          "name": "transaction_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "bank_id": {
-          "name": "bank_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "account_id": {
-          "name": "account_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "category_id": {
-          "name": "category_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "status": {
-          "name": "status",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "booking_date_time": {
-          "name": "booking_date_time",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "value_date_time": {
-          "name": "value_date_time",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "amount": {
-          "name": "amount",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "currency": {
-          "name": "currency",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "creditor_name": {
-          "name": "creditor_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "debtor_name": {
-          "name": "debtor_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "transaction_user_id_user_id_fk": {
-          "name": "transaction_user_id_user_id_fk",
-          "tableFrom": "transaction",
-          "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "transaction_category_id_category_id_fk": {
-          "name": "transaction_category_id_category_id_fk",
-          "tableFrom": "transaction",
-          "tableTo": "category",
-          "columnsFrom": [
-            "category_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "transaction_user_id_bank_id_account_id_account_user_id_bank_id_account_id_fk": {
-          "name": "transaction_user_id_bank_id_account_id_account_user_id_bank_id_account_id_fk",
-          "tableFrom": "transaction",
-          "tableTo": "account",
-          "columnsFrom": [
-            "user_id",
-            "bank_id",
-            "account_id"
-          ],
-          "columnsTo": [
-            "user_id",
-            "bank_id",
-            "account_id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "transaction_transaction_id_account_id_user_id_pk": {
-          "columns": [
-            "account_id",
-            "transaction_id",
-            "user_id"
-          ],
-          "name": "transaction_transaction_id_account_id_user_id_pk"
-        }
-      },
-      "uniqueConstraints": {}
-    },
-    "user": {
-      "name": "user",
+    "Users": {
+      "name": "Users",
       "columns": {
         "id": {
           "name": "id",

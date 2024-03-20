@@ -1,11 +1,11 @@
 {
   "version": "5",
   "dialect": "sqlite",
-  "id": "cb932ba7-1fed-4527-8412-46016a3f7435",
-  "prevId": "e0bb569b-794f-4969-8470-e86197590a32",
+  "id": "56ad1ed3-946f-42c3-b19b-c8485ce3ac4e",
+  "prevId": "617ea2e2-7ebd-484b-8fca-8020e4b807f8",
   "tables": {
-    "bank": {
-      "name": "bank",
+    "Banks": {
+      "name": "Banks",
       "columns": {
         "bank_id": {
           "name": "bank_id",
@@ -52,10 +52,10 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "bank_user_id_user_id_fk": {
-          "name": "bank_user_id_user_id_fk",
-          "tableFrom": "bank",
-          "tableTo": "user",
+        "Banks_user_id_Users_id_fk": {
+          "name": "Banks_user_id_Users_id_fk",
+          "tableFrom": "Banks",
+          "tableTo": "Users",
           "columnsFrom": [
             "user_id"
           ],
@@ -67,18 +67,18 @@
         }
       },
       "compositePrimaryKeys": {
-        "bank_bank_id_user_id_pk": {
+        "Banks_bank_id_user_id_pk": {
           "columns": [
             "bank_id",
             "user_id"
           ],
-          "name": "bank_bank_id_user_id_pk"
+          "name": "Banks_bank_id_user_id_pk"
         }
       },
       "uniqueConstraints": {}
     },
-    "user": {
-      "name": "user",
+    "Users": {
+      "name": "Users",
       "columns": {
         "id": {
           "name": "id",

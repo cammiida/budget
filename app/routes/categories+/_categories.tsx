@@ -14,7 +14,7 @@ import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { getDbFromContext } from "~/lib/db.service.server";
 import { DbApi } from "~/lib/dbApi";
-import { category } from "~/lib/schema";
+import { categories } from "~/lib/schema";
 
 export async function loader({ context }: LoaderFunctionArgs) {
   const api = DbApi.create({ context });
@@ -59,9 +59,9 @@ async function updateCategoryAction(
 
   const db = getDbFromContext(context);
   await db
-    .update(category)
+    .update(categories)
     .set({ keywords: data.keywords })
-    .where(and(eq(category.id, data.id), eq(category.userId, userId)));
+    .where(and(eq(categories.id, data.id), eq(categories.userId, userId)));
 
   return json({ success: true });
 }

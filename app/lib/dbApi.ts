@@ -38,22 +38,22 @@ export class DbApi {
   }
 
   async getAllUsers(): Promise<User[]> {
-    return this.db.select().from(schema.user).all();
+    return this.db.select().from(schema.users).all();
   }
 
   async getUserById(id: number): Promise<User | undefined> {
     return this.db
       .select()
-      .from(schema.user)
-      .where(eq(schema.user.id, id))
+      .from(schema.users)
+      .where(eq(schema.users.id, id))
       .get();
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
     return this.db
       .select()
-      .from(schema.user)
-      .where(eq(schema.user.email, email))
+      .from(schema.users)
+      .where(eq(schema.users.email, email))
       .get();
   }
 
@@ -62,8 +62,8 @@ export class DbApi {
 
     return await this.db
       .select()
-      .from(schema.bank)
-      .where(eq(schema.bank.userId, user.id))
+      .from(schema.banks)
+      .where(eq(schema.banks.userId, user.id))
       .all();
   }
 
@@ -71,10 +71,10 @@ export class DbApi {
     const user = this.getCurrentUser();
 
     return this.db
-      .insert(schema.bank)
+      .insert(schema.banks)
       .values({ ...bank, userId: user.id })
       .onConflictDoUpdate({
-        target: [schema.bank.userId, schema.bank.bankId],
+        target: [schema.banks.userId, schema.banks.bankId],
         set: { ...bank, userId: user.id },
       })
       .returning()
@@ -85,9 +85,9 @@ export class DbApi {
     const user = this.getCurrentUser();
 
     return this.db
-      .delete(schema.bank)
+      .delete(schema.banks)
       .where(
-        and(eq(schema.bank.userId, user.id), eq(schema.bank.bankId, bankId)),
+        and(eq(schema.banks.userId, user.id), eq(schema.banks.bankId, bankId)),
       )
       .returning()
       .get();
@@ -98,9 +98,9 @@ export class DbApi {
 
     return this.db
       .select()
-      .from(schema.bank)
+      .from(schema.banks)
       .where(
-        and(eq(schema.bank.userId, user.id), eq(schema.bank.bankId, bankId)),
+        and(eq(schema.banks.userId, user.id), eq(schema.banks.bankId, bankId)),
       )
       .get();
   }
@@ -109,10 +109,10 @@ export class DbApi {
     const user = this.getCurrentUser();
 
     return this.db
-      .update(schema.bank)
+      .update(schema.banks)
       .set(updates)
       .where(
-        and(eq(schema.bank.userId, user.id), eq(schema.bank.bankId, bankId)),
+        and(eq(schema.banks.userId, user.id), eq(schema.banks.bankId, bankId)),
       )
       .returning();
   }
@@ -122,11 +122,11 @@ export class DbApi {
 
     return this.db
       .select()
-      .from(schema.account)
+      .from(schema.accounts)
       .where(
         and(
-          eq(schema.account.userId, user.id),
-          inArray(schema.account.bankId, bankIds),
+          eq(schema.accounts.userId, user.id),
+          inArray(schema.accounts.bankId, bankIds),
         ),
       )
       .all();
@@ -137,8 +137,8 @@ export class DbApi {
 
     return this.db
       .select()
-      .from(schema.account)
-      .where(eq(schema.account.userId, user.id))
+      .from(schema.accounts)
+      .where(eq(schema.accounts.userId, user.id))
       .all();
   }
 
@@ -149,13 +149,13 @@ export class DbApi {
 
     try {
       return await this.db
-        .insert(schema.account)
+        .insert(schema.accounts)
         .values(accounts)
         .onConflictDoUpdate({
           target: [
-            schema.account.userId,
-            schema.account.bankId,
-            schema.account.accountId,
+            schema.accounts.userId,
+            schema.accounts.bankId,
+            schema.accounts.accountId,
           ],
           set: {
             balances: sql`excluded.balances`,
@@ -179,8 +179,8 @@ export class DbApi {
 
     return this.db
       .select()
-      .from(schema.category)
-      .where(eq(schema.category.userId, currentUser.id))
+      .from(schema.categories)
+      .where(eq(schema.categories.userId, currentUser.id))
       .all();
   }
 
@@ -188,7 +188,7 @@ export class DbApi {
     const currentUser = this.getCurrentUser();
 
     return this.db
-      .insert(schema.category)
+      .insert(schema.categories)
       .values({ ...data, userId: currentUser.id })
       .onConflictDoNothing()
       .returning()
@@ -199,11 +199,11 @@ export class DbApi {
     const currentUser = this.getCurrentUser();
 
     return this.db
-      .delete(schema.category)
+      .delete(schema.categories)
       .where(
         and(
-          eq(schema.category.id, id),
-          eq(schema.category.userId, currentUser.id),
+          eq(schema.categories.id, id),
+          eq(schema.categories.userId, currentUser.id),
         ),
       )
       .returning()
@@ -213,8 +213,8 @@ export class DbApi {
   async getTransactions() {
     const currentUser = this.getCurrentUser();
 
-    return this.db.query.transaction.findMany({
-      where: eq(schema.transaction.userId, currentUser.id),
+    return this.db.query.bankTransactions.findMany({
+      where: eq(schema.bankTransactions.userId, currentUser.id),
       with: { category: true, account: true },
     });
   }
@@ -233,13 +233,13 @@ export class DbApi {
 
       try {
         const slicedResults = await this.db
-          .insert(schema.transaction)
+          .insert(schema.bankTransactions)
           .values(transactions.slice(start, end))
           .onConflictDoNothing({
             target: [
-              schema.transaction.transactionId,
-              schema.transaction.accountId,
-              schema.transaction.userId,
+              schema.bankTransactions.transactionId,
+              schema.bankTransactions.accountId,
+              schema.bankTransactions.userId,
             ],
           })
           .returning();
@@ -259,10 +259,10 @@ export class DbApi {
     const currentUser = this.getCurrentUser();
 
     return this.db
-      .select({ date: schema.transaction.bookingDate })
-      .from(schema.transaction)
-      .where(eq(schema.transaction.userId, currentUser.id))
-      .orderBy(desc(schema.transaction.bookingDate))
+      .select({ date: schema.bankTransactions.bookingDate })
+      .from(schema.bankTransactions)
+      .where(eq(schema.bankTransactions.userId, currentUser.id))
+      .orderBy(desc(schema.bankTransactions.bookingDate))
       .get();
   }
 
@@ -273,12 +273,12 @@ export class DbApi {
     return await Promise.all(
       elements.map((it) =>
         this.db
-          .update(schema.transaction)
+          .update(schema.bankTransactions)
           .set({ categoryId: it.categoryId })
           .where(
             and(
-              eq(schema.transaction.transactionId, it.transactionId),
-              eq(schema.transaction.userId, currentUser.id),
+              eq(schema.bankTransactions.transactionId, it.transactionId),
+              eq(schema.bankTransactions.userId, currentUser.id),
             ),
           )
           .returning()

@@ -1,1 +1,0 @@
-ALTER TABLE `category` ADD `keywords` text;

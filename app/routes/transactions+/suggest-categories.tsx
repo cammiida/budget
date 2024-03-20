@@ -29,9 +29,12 @@ import {
 } from "~/components/ui/dialog";
 import { getDbFromContext } from "~/lib/db.service.server";
 import { DbApi } from "~/lib/dbApi";
-import { category, transaction as transactionTable } from "~/lib/schema";
-import { formatDate } from "~/lib/utils";
+import {
+  categories as categoriesTable,
+  bankTransactions as transactionTable,
+} from "~/lib/schema";
 import { transactionStringSchema } from "./_transactions";
+import { formatDate } from "~/lib/utils";
 
 export async function loader({ context }: LoaderFunctionArgs) {
   const user = context.user;
@@ -42,7 +45,7 @@ export async function loader({ context }: LoaderFunctionArgs) {
   const db = getDbFromContext(context);
 
   const [transactions, categories] = await db.batch([
-    db.query.transaction.findMany({
+    db.query.bankTransactions.findMany({
       where: eq(transactionTable.userId, user.id),
       orderBy: desc(transactionTable.valueDate),
       columns: {
@@ -59,7 +62,10 @@ export async function loader({ context }: LoaderFunctionArgs) {
         category: { columns: { id: true, name: true, keywords: true } },
       },
     }),
-    db.select().from(category).where(eq(category.userId, user.id)),
+    db
+      .select()
+      .from(categoriesTable)
+      .where(eq(categoriesTable.userId, user.id)),
   ]);
 
   const transactionsWithSuggestedCategory = transactions

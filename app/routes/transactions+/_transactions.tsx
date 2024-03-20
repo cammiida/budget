@@ -24,7 +24,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { formatISO9075 } from "date-fns";
-import { and, desc, eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { route } from "routes-gen";
@@ -48,7 +48,7 @@ import { getDbFromContext } from "~/lib/db.service.server";
 import { DbApi } from "~/lib/dbApi";
 import { GoCardlessApi } from "~/lib/gocardless-api.server";
 import type { NewTransaction } from "~/lib/schema";
-import { category, transaction as transactionTable } from "~/lib/schema";
+import { categories, bankTransactions as transactionTable } from "~/lib/schema";
 import { formatDate, transformRemoteTransactions } from "~/lib/utils";
 
 export const transactionStringSchema = z.string().transform((arg) => {
@@ -72,13 +72,13 @@ export async function loader({ context }: LoaderFunctionArgs) {
   }
 
   const db = getDbFromContext(context);
-  const allCategories = await db.query.category.findMany({
+  const allCategories = await db.query.categories.findMany({
     columns: { name: true, id: true, keywords: true },
-    where: eq(category.userId, userId),
+    where: eq(categories.userId, userId),
   });
 
-  const transactions = await db.query.transaction.findMany({
-    where: and(eq(transactionTable.userId, userId)),
+  const transactions = await db.query.bankTransactions.findMany({
+    where: eq(transactionTable.userId, userId),
     orderBy: desc(transactionTable.valueDate),
     columns: {
       additionalInformation: true,
