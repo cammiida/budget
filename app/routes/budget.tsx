@@ -1,6 +1,7 @@
-import { LoaderFunctionArgs, SerializeFrom, json } from "@remix-run/cloudflare";
+import type { LoaderFunctionArgs, SerializeFrom } from "@remix-run/cloudflare";
+import { json } from "@remix-run/cloudflare";
 import { useLoaderData } from "@remix-run/react";
-import { CurrencyExchangeSchema } from "generated-sources/gocardless";
+import type { CurrencyExchangeSchema } from "generated-sources/gocardless";
 
 type Account = {
   id: string;
@@ -44,9 +45,6 @@ type Budget = {
 };
 
 export async function loader({ request, context }: LoaderFunctionArgs) {
-  const url = new URL(request.url);
-  const budgetId = url.searchParams.get("budgetId");
-
   // TODO: api call to get budget by id or most recent budget if no id is provided
 
   const categories: Category[] = [

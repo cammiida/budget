@@ -1,14 +1,17 @@
-import { AppLoadContext, redirect } from "@remix-run/cloudflare";
+import type { AppLoadContext } from "@remix-run/cloudflare";
+import { redirect } from "@remix-run/cloudflare";
+import type {
+  BankTransactionStatusSchema,
+  RequisitionRequest,
+} from "generated-sources/gocardless";
 import {
   AccountsService,
   ApiError,
-  BankTransactionStatusSchema,
   InstitutionsService,
   OpenAPI,
-  RequisitionRequest,
   RequisitionsService,
 } from "generated-sources/gocardless";
-import { Account, Bank } from "./schema";
+import type { Bank } from "./schema";
 
 export class GoCardlessApi {
   private context: AppLoadContext;
@@ -51,7 +54,7 @@ export class GoCardlessApi {
       undefined,
       undefined,
       undefined,
-      "no"
+      "no",
     );
   }
 
@@ -100,10 +103,12 @@ export class GoCardlessApi {
 
   // FIXME: wrong type definition in the generated sources
   async getAccountTransactions(accountId: string, dateFrom?: string) {
-    return (await AccountsService.retrieveAccountTransactions(
+    const transactions = await AccountsService.retrieveAccountTransactions(
       accountId,
-      dateFrom
-    )) as unknown as {
+      dateFrom,
+    );
+
+    return transactions as unknown as {
       transactions: BankTransactionStatusSchema;
     };
   }
