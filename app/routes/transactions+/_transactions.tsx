@@ -64,7 +64,6 @@ export const transactionStringSchema = z.string().transform((arg) => {
 });
 
 export async function loader({ context }: LoaderFunctionArgs) {
-  const dbApi = DbApi.create({ context });
   const userId = context.user?.id;
 
   if (!userId) {
@@ -95,13 +94,8 @@ export async function loader({ context }: LoaderFunctionArgs) {
     },
   });
 
-  const lastSavedTransactionDate = toLocaleDateString(
-    (await dbApi.getLatestTransactionDate())?.date ?? new Date(),
-  );
-
   return json({
     transactions,
-    lastSavedTransactionDate,
     categories: allCategories,
   });
 }
@@ -117,11 +111,14 @@ async function syncTransactions({
   context,
   userId,
 }: SyncTransactionsArgs) {
-  const fromDate =
-    z.string().nullish().parse(formData.get("fromDate")) ?? undefined;
-
   const dbApi = DbApi.create({ context });
   const goCardlessApi = GoCardlessApi.create({ context });
+
+  const lastSavedTransactionDate = (await dbApi.getLatestTransactionDate())
+    ?.date;
+  const fromDate = lastSavedTransactionDate
+    ? toLocaleDateString(lastSavedTransactionDate)
+    : undefined;
 
   const accounts = await dbApi.getAccounts();
 
@@ -176,8 +173,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
 }
 
 export default function Transactions() {
-  const { transactions, lastSavedTransactionDate, categories } =
-    useLoaderData<typeof loader>();
+  const { transactions, categories } = useLoaderData<typeof loader>();
   const actionData = useActionData() as { success: boolean } | undefined;
 
   const navigate = useNavigate();
@@ -292,14 +288,6 @@ export default function Transactions() {
             Suggest categories
           </Button>
           <Form method="POST">
-            {lastSavedTransactionDate && (
-              <input
-                readOnly
-                hidden
-                name="fromDate"
-                value={lastSavedTransactionDate}
-              />
-            )}
             <input readOnly hidden name="intent" value="sync" />
             <Button disabled={isNavigating} className="flex gap-2">
               <RefreshCw
