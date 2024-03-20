@@ -249,6 +249,8 @@ export default function Transactions() {
         <SelectCategory categories={categories} transaction={row.original} />
       ),
     },
+    { accessorKey: "spendingType", header: "Spending Type" },
+    { accessorKey: "wantOrNeed", header: "Want/Need" },
   ];
 
   const table = useReactTable({

@@ -186,6 +186,8 @@ export const bankTransactions = sqliteTable(
     debtorBban: text("debtor_bban"),
 
     additionalInformation: text("additional_information"),
+    spendingType: text("spending_type").$type<"variable" | "fixed">(),
+    wantOrNeed: text("want_or_need").$type<"want" | "need">(),
   },
   (transaction) => ({
     accountReference: foreignKey({
