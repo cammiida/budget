@@ -16,7 +16,6 @@ import {
 } from "@remix-run/react";
 import type { Column, ColumnDef } from "@tanstack/react-table";
 import {
-  filterFns,
   getCoreRowModel,
   getFilteredRowModel,
   getPaginationRowModel,
@@ -253,12 +252,12 @@ export default function Transactions() {
   const uniqueAccountNames = new Set(
     transactions.map((t) => prettifyAccountName(t.account.name)),
   );
-  filterFns.arrIncludesSome.autoRemove = () => false;
 
   const columns: ColumnDef<ClientTransaction>[] = [
     {
       id: "bank",
       accessorKey: "bank.name",
+      filterFn: "arrIncludesSome",
       header: (c) => <SortableHeaderCell context={c} name="Bank" />,
       cell: ({ row }) => {
         const bank = row.original.bank;
@@ -273,12 +272,12 @@ export default function Transactions() {
           </>
         );
       },
-      filterFn: "arrIncludesSome",
     },
     {
       id: "account",
       accessorFn: (row) => prettifyAccountName(row.account?.name ?? ""),
       header: (c) => <SortableHeaderCell context={c} name="Account" />,
+      filterFn: "arrIncludesSome",
       cell: ({ row }) => {
         const account = row.original.account;
         return (
@@ -289,7 +288,6 @@ export default function Transactions() {
           </>
         );
       },
-      filterFn: "arrIncludesSome",
     },
     {
       accessorKey: "valueDate",
@@ -325,7 +323,10 @@ export default function Transactions() {
       ),
     },
     {
-      accessorKey: "spendingType",
+      id: "spendingType",
+      accessorFn: (row) =>
+        row.spendingType ? SPENDING_TYPES[row.spendingType] : undefined,
+      filterFn: "arrIncludesSome",
       header: "Spending Type",
       cell: ({ row }) => (
         <CustomSelect
@@ -344,7 +345,10 @@ export default function Transactions() {
       ),
     },
     {
-      accessorKey: "wantOrNeed",
+      id: "wantOrNeed",
+      accessorFn: (row) =>
+        row.wantOrNeed ? WANT_OR_NEED[row.wantOrNeed] : undefined,
+      filterFn: "arrIncludesSome",
       header: "Want/Need",
       cell: ({ row }) => (
         <CustomSelect
@@ -373,12 +377,6 @@ export default function Transactions() {
     getFilteredRowModel: getFilteredRowModel(),
     onGlobalFilterChange: setGlobalFilter,
     globalFilterFn: "includesString",
-    initialState: {
-      columnFilters: [
-        { id: "bank", value: [...uniqueBanks] },
-        { id: "account", value: [...uniqueAccountNames] },
-      ],
-    },
     state: {
       globalFilter,
     },
@@ -431,6 +429,16 @@ export default function Transactions() {
               header="Accounts"
               column={table.getColumn("account")}
               values={[...uniqueAccountNames]}
+            />
+            <CheckBoxFilterGroup
+              header="Spending Type"
+              column={table.getColumn("spendingType")}
+              values={Object.values(SPENDING_TYPES)}
+            />
+            <CheckBoxFilterGroup
+              header="Want/Need"
+              column={table.getColumn("wantOrNeed")}
+              values={Object.values(WANT_OR_NEED)}
             />
           </div>
         </DataTableFilter>
