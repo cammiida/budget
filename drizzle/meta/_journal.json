@@ -43,6 +43,13 @@
       "when": 1710936502382,
       "tag": "0005_low_shotgun",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1711110395931,
+      "tag": "0006_strong_tigra",
+      "breakpoints": true
     }
   ]
 }

@@ -15,6 +15,7 @@ import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { desc, eq } from "drizzle-orm";
 import { Link } from "react-router-dom";
 import { route } from "routes-gen";
+import ClientOnly from "~/components/client-only";
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
 import { DataTable } from "~/components/ui/data-table";
@@ -22,7 +23,6 @@ import {
   Dialog,
   DialogClose,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -33,8 +33,8 @@ import {
   categories as categoriesTable,
   bankTransactions as transactionTable,
 } from "~/lib/schema";
-import { transactionStringSchema } from "./_transactions";
 import { formatDate } from "~/lib/utils";
+import { transactionStringSchema } from "./_transactions";
 
 export async function loader({ context }: LoaderFunctionArgs) {
   const user = context.user;
@@ -209,46 +209,52 @@ export default function SuggestCategories() {
   });
 
   return (
-    <Dialog open onOpenChange={handleClose}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>
-            <h1 className="text-lg">Suggested categories</h1>
-          </DialogTitle>
-          <DialogDescription className="w-full overflow-auto">
+    <ClientOnly>
+      {() => (
+        <Dialog open onOpenChange={handleClose}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="text-lg">
+                Suggested categories
+              </DialogTitle>
+            </DialogHeader>
             <div className="flex h-96 flex-col gap-4">
               <DataTable table={table} />
             </div>
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter className="sm:justify-start">
-          <DialogClose asChild>
-            <Link to={route("/transactions") + `?${searchParams.toString()}`}>
-              <Button type="button" variant="secondary">
-                Cancel
-              </Button>
-            </Link>
-          </DialogClose>
-          <Form method="POST">
-            <input
-              readOnly
-              hidden
-              name="transactions"
-              value={JSON.stringify(
-                table
-                  .getSelectedRowModel()
-                  .rows.map(
-                    ({ original: { transactionId, suggestedCategory } }) => ({
-                      transactionId,
-                      categoryId: suggestedCategory.id,
-                    }),
-                  ),
-              )}
-            />
-            <Button type="submit">Save</Button>
-          </Form>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+            <DialogFooter className="sm:justify-start">
+              <DialogClose asChild>
+                <Link
+                  to={route("/transactions") + `?${searchParams.toString()}`}
+                >
+                  <Button type="button" variant="secondary">
+                    Cancel
+                  </Button>
+                </Link>
+              </DialogClose>
+              <Form method="POST">
+                <input
+                  readOnly
+                  hidden
+                  name="transactions"
+                  value={JSON.stringify(
+                    table
+                      .getSelectedRowModel()
+                      .rows.map(
+                        ({
+                          original: { transactionId, suggestedCategory },
+                        }) => ({
+                          transactionId,
+                          categoryId: suggestedCategory.id,
+                        }),
+                      ),
+                  )}
+                />
+                <Button type="submit">Save</Button>
+              </Form>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+    </ClientOnly>
   );
 }
