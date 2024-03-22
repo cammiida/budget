@@ -1,7 +1,6 @@
-import "@remix-run/cloudflare";
-import { Session } from "@remix-run/cloudflare";
-import { Env } from "env.server";
-import { GoCardlessSessionData, GoogleSession } from "~/lib/cookie.server";
+import type { Session } from "@remix-run/cloudflare";
+import type { Env } from "env.server";
+import type { GoCardlessSessionData, GoogleSession } from "~/lib/cookie.server";
 
 declare module "@remix-run/cloudflare" {
   interface AppLoadContext {

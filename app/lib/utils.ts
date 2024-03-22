@@ -6,6 +6,7 @@ import type { TransactionSchema } from "generated-sources/gocardless";
 import type { RouteId } from "route-ids";
 import { twMerge } from "tailwind-merge";
 import type { NewTransaction, Transaction } from "./schema";
+import { z } from "zod";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -79,6 +80,8 @@ export function transformRemoteTransaction({
     debtorBban: remote.debtorAccount?.bban ?? null,
     creditorBban: remote.creditorAccount?.bban ?? null,
     exchangeRate: remote.currencyExchange?.[0]?.exchangeRate ?? null,
+    spendingType: null,
+    wantOrNeed: null,
   };
 }
 
@@ -91,4 +94,13 @@ export function formatDate(dateString: string) {
 
 export function useRouteLoaderDataTyped<T>(routeId: RouteId) {
   return useRouteLoaderData(routeId) as SerializeFrom<T>;
+}
+
+/** Converts a plain object's keys into ZodEnum with type safety and autocompletion */
+export function getZodEnumFromObjectKeys<
+  TI extends Record<string, any>,
+  R extends string = TI extends Record<infer R, any> ? R : never,
+>(input: TI): z.ZodEnum<[R, ...R[]]> {
+  const [firstKey, ...otherKeys] = Object.keys(input) as [R, ...R[]];
+  return z.enum([firstKey, ...otherKeys]);
 }

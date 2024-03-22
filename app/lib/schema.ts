@@ -12,6 +12,7 @@ import {
 import { createInsertSchema } from "drizzle-zod";
 import type { BalanceSchema } from "generated-sources/gocardless";
 import { z } from "zod";
+import type { SpendingType, WantOrNeed } from "./constants";
 
 export const users = sqliteTable(
   "Users",
@@ -186,8 +187,8 @@ export const bankTransactions = sqliteTable(
     debtorBban: text("debtor_bban"),
 
     additionalInformation: text("additional_information"),
-    spendingType: text("spending_type").$type<"variable" | "fixed">(),
-    wantOrNeed: text("want_or_need").$type<"want" | "need">(),
+    spendingType: text("spending_type").$type<SpendingType>(),
+    wantOrNeed: text("want_or_need").$type<WantOrNeed>(),
   },
   (transaction) => ({
     accountReference: foreignKey({

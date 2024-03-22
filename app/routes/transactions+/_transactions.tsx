@@ -24,7 +24,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { formatISO9075 } from "date-fns";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { route } from "routes-gen";
@@ -44,12 +44,22 @@ import {
   SelectValue,
 } from "~/components/ui/select";
 import { LargeText } from "~/components/ui/typography";
+import type { Intent } from "~/lib/constants";
+import { INTENTS, SPENDING_TYPES, WANT_OR_NEED } from "~/lib/constants";
 import { getDbFromContext } from "~/lib/db.service.server";
 import { DbApi } from "~/lib/dbApi";
 import { GoCardlessApi } from "~/lib/gocardless-api.server";
 import type { NewTransaction } from "~/lib/schema";
-import { categories, bankTransactions as transactionTable } from "~/lib/schema";
-import { formatDate, transformRemoteTransactions } from "~/lib/utils";
+import {
+  bankTransactions,
+  categories,
+  bankTransactions as transactionTable,
+} from "~/lib/schema";
+import {
+  formatDate,
+  getZodEnumFromObjectKeys,
+  transformRemoteTransactions,
+} from "~/lib/utils";
 
 export const transactionStringSchema = z.string().transform((arg) => {
   if (!arg) return [];
@@ -86,6 +96,8 @@ export async function loader({ context }: LoaderFunctionArgs) {
       valueDate: true,
       currency: true,
       transactionId: true,
+      spendingType: true,
+      wantOrNeed: true,
     },
     with: {
       account: { columns: { bban: true, accountId: true, name: true } },
@@ -101,16 +113,11 @@ export async function loader({ context }: LoaderFunctionArgs) {
 }
 
 type SyncTransactionsArgs = {
-  formData: FormData;
   context: AppLoadContext;
   userId: number;
 };
 
-async function syncTransactions({
-  formData,
-  context,
-  userId,
-}: SyncTransactionsArgs) {
+async function syncTransactions({ context, userId }: SyncTransactionsArgs) {
   const dbApi = DbApi.create({ context });
   const goCardlessApi = GoCardlessApi.create({ context });
 
@@ -150,26 +157,86 @@ export async function action({ request, context }: ActionFunctionArgs) {
 
   const formData = await request.formData();
 
-  const intent = z
-    .literal("sync")
-    .or(z.literal("saveCategories"))
-    .parse(formData.get("intent"));
+  const intent = getZodEnumFromObjectKeys(INTENTS).parse(
+    formData.get("intent"),
+  );
 
   if (intent === "sync") {
-    return syncTransactions({ formData, context, userId: user.id });
-  } else if (intent === "saveCategories") {
-    const transactions = transactionStringSchema.parse(
-      formData.get("transactions"),
-    );
-
-    const dbApi = DbApi.create({ context });
-    const updatedTransactions =
-      await dbApi.updateTransactionCategories(transactions);
-
-    return json({ success: true, transactions: updatedTransactions });
+    return syncTransactions({ context, userId: user.id });
   }
 
-  return json({ success: false }, { status: 400 });
+  const transactionId = z.string().parse(formData.get("transactionId"));
+
+  switch (intent) {
+    case "updateCategory": {
+      const categoryId = z
+        .string()
+        .nullable()
+        .transform((arg) => (arg ? parseInt(arg) : null))
+        .parse(formData.get("value"));
+
+      const dbApi = DbApi.create({ context });
+      const updatedTransactions = await dbApi.updateTransactionCategories([
+        { transactionId, categoryId },
+      ]);
+
+      return json({ success: true, transaction: updatedTransactions[0] });
+    }
+    case "updateSpendingType": {
+      const user = context.user;
+      if (!user) {
+        return redirect("/auth/login", { status: 401 });
+      }
+
+      const spendingType =
+        formData.get("value") !== "null"
+          ? getZodEnumFromObjectKeys(SPENDING_TYPES).parse(
+              formData.get("value"),
+            )
+          : null;
+
+      const db = getDbFromContext(context);
+      const updatedTransaction = await db
+        .update(bankTransactions)
+        .set({ spendingType })
+        .where(
+          and(
+            eq(bankTransactions.transactionId, transactionId),
+            eq(bankTransactions.userId, user.id),
+          ),
+        )
+        .returning()
+        .get();
+
+      return json({ success: true, transaction: updatedTransaction });
+    }
+    case "updateWantOrNeed": {
+      const user = context.user;
+      if (!user) {
+        return redirect("/auth/login", { status: 401 });
+      }
+
+      const wantOrNeed =
+        formData.get("value") !== "null"
+          ? getZodEnumFromObjectKeys(WANT_OR_NEED).parse(formData.get("value"))
+          : null;
+
+      const db = getDbFromContext(context);
+      const updatedTransaction = await db
+        .update(bankTransactions)
+        .set({ wantOrNeed })
+        .where(
+          and(
+            eq(bankTransactions.transactionId, transactionId),
+            eq(bankTransactions.userId, user.id),
+          ),
+        )
+        .returning()
+        .get();
+
+      return json({ success: true, transaction: updatedTransaction });
+    }
+  }
 }
 
 export default function Transactions() {
@@ -246,11 +313,55 @@ export default function Transactions() {
       accessorKey: "category.name",
       header: "Category",
       cell: ({ row }) => (
-        <SelectCategory categories={categories} transaction={row.original} />
+        <CustomSelect
+          values={categories.map(({ id, name }) => ({
+            key: id.toString(),
+            value: name,
+          }))}
+          intent="updateCategory"
+          transactionId={row.original.transactionId}
+          placeholder={row.original.category?.name}
+        />
       ),
     },
-    { accessorKey: "spendingType", header: "Spending Type" },
-    { accessorKey: "wantOrNeed", header: "Want/Need" },
+    {
+      accessorKey: "spendingType",
+      header: "Spending Type",
+      cell: ({ row }) => (
+        <CustomSelect
+          values={Object.entries(SPENDING_TYPES).map(([key, value]) => ({
+            key,
+            value,
+          }))}
+          intent="updateSpendingType"
+          transactionId={row.original.transactionId}
+          placeholder={
+            row.original.spendingType
+              ? SPENDING_TYPES[row.original.spendingType]
+              : undefined
+          }
+        />
+      ),
+    },
+    {
+      accessorKey: "wantOrNeed",
+      header: "Want/Need",
+      cell: ({ row }) => (
+        <CustomSelect
+          values={Object.entries(WANT_OR_NEED).map(([key, value]) => ({
+            key,
+            value,
+          }))}
+          intent="updateWantOrNeed"
+          transactionId={row.original.transactionId}
+          placeholder={
+            row.original.wantOrNeed
+              ? WANT_OR_NEED[row.original.wantOrNeed]
+              : undefined
+          }
+        />
+      ),
+    },
   ];
 
   const table = useReactTable({
@@ -330,43 +441,41 @@ export default function Transactions() {
 
 export type Loader = typeof loader;
 type ClientTransaction = SerializeFrom<Loader>["transactions"][0];
-type ClientCategory = SerializeFrom<Loader>["categories"][0];
 
-function SelectCategory({
-  transaction,
-  categories,
-}: {
-  transaction: ClientTransaction;
-  categories: ClientCategory[];
-}) {
+type CustomSelectProps<T> = {
+  values: T[];
+  intent: Intent;
+  placeholder?: string;
+  transactionId: string;
+};
+
+function CustomSelect<T extends { key: string; value: string }>({
+  values,
+  intent,
+  placeholder,
+  transactionId,
+}: CustomSelectProps<T>) {
   const submit = useSubmit();
-  const category = transaction.category;
 
   return (
     <Select
       onValueChange={(value) => {
         const formData = new FormData();
-        formData.append("intent", "saveCategories");
-        formData.append(
-          "transactions",
-          JSON.stringify([
-            {
-              transactionId: transaction.transactionId,
-              categoryId: value && value !== "null" ? parseInt(value) : null,
-            },
-          ]),
-        );
+        formData.append("intent", intent);
+        formData.append("transactionId", transactionId);
+        formData.append("value", value);
+
         return submit(formData, { method: "POST" });
       }}
     >
       <SelectTrigger className="w-[180px]">
-        <SelectValue placeholder={category?.name} />
+        <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>
         <SelectItem value="null">-</SelectItem>
-        {categories.map((category) => (
-          <SelectItem key={category.id} value={category.id.toString()}>
-            {category.name}
+        {values.map(({ key, value }) => (
+          <SelectItem key={key} value={key}>
+            {value}
           </SelectItem>
         ))}
       </SelectContent>
