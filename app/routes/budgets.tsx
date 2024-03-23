@@ -1,6 +1,6 @@
 import type { LoaderFunctionArgs } from "@remix-run/cloudflare";
 import { json, redirect } from "@remix-run/cloudflare";
-import { Outlet, useLoaderData } from "@remix-run/react";
+import { NavLink, Outlet, useLoaderData } from "@remix-run/react";
 import { eq } from "drizzle-orm";
 import { route } from "routes-gen";
 import { getDbFromContext } from "~/lib/db.service.server";
@@ -21,7 +21,7 @@ export async function loader({ context }: LoaderFunctionArgs) {
   return json({ budgets });
 }
 
-export default function Budget() {
+export default function Budgets() {
   const { budgets } = useLoaderData<typeof loader>();
 
   return (
@@ -30,7 +30,15 @@ export default function Budget() {
         <h1 className="text-xl">Budgets</h1>
         <ul>
           {budgets.map((budget) => (
-            <h2 key={budget.id}>{budget.name}</h2>
+            <NavLink
+              key={budget.id}
+              className={(isActive) =>
+                `${isActive && "bg-slate-200"} flex  grow items-center gap-2 rounded-md bg-slate-50 p-5 shadow-sm`
+              }
+              to={route("/budgets/:budgetName", { budgetName: budget.name })}
+            >
+              <h2 key={budget.id}>{budget.name}</h2>
+            </NavLink>
           ))}
         </ul>
       </div>

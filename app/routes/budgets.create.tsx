@@ -31,14 +31,14 @@ export async function action({ request, context }: ActionFunctionArgs) {
   const db = getDbFromContext(context);
   await db.insert(budgets).values({ userId: user.id, name }).returning().get();
 
-  return redirect(route("/budget"));
+  return redirect(route("/budgets"));
 }
 
 export default function CreateBudget() {
   const navigate = useNavigate();
 
   function handleClose() {
-    navigate(route("/budget"));
+    navigate(route("/budgets"));
   }
 
   return (

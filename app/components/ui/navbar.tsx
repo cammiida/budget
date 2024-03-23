@@ -1,12 +1,13 @@
 import { Form, Link, NavLink } from "@remix-run/react";
 import { useState } from "react";
-import { RouteParams, route } from "routes-gen";
+import type { RouteParams } from "routes-gen";
+import { route } from "routes-gen";
 import { useRootData } from "~/root";
 
 const ROUTES: { name: string; route: keyof RouteParams }[] = [
   {
     name: "Budget",
-    route: route("/budget"),
+    route: route("/budgets"),
   },
   {
     name: "Banks",
