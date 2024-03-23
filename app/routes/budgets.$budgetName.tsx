@@ -1,9 +1,11 @@
 import { json, redirect, type LoaderFunctionArgs } from "@remix-run/cloudflare";
 import { useLoaderData, useSearchParams } from "@remix-run/react";
-import { format, startOfMonth } from "date-fns";
+import { addMonths, format, startOfMonth } from "date-fns";
 import { and, eq } from "drizzle-orm";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { route } from "routes-gen";
 import { z } from "zod";
+import { Button } from "~/components/ui/button";
 import { getDbFromContext } from "~/lib/db.service.server";
 import { budgets } from "~/lib/schema";
 
@@ -37,13 +39,31 @@ export async function loader({ context, params }: LoaderFunctionArgs) {
 
 export default function Budget() {
   const { budget } = useLoaderData<typeof loader>();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const { date } = dateSchema.parse(Object.fromEntries(searchParams));
 
+  function prevMonth() {
+    searchParams.set("date", format(addMonths(date, -1), "yyyy-MM"));
+    setSearchParams(searchParams);
+  }
+
+  function nextMonth() {
+    searchParams.set("date", format(addMonths(date, 1), "yyyy-MM"));
+    setSearchParams(searchParams);
+  }
+
   return (
     <div>
-      {format(date, "MMMM yyyy")}
+      <div className="flex items-center gap-2">
+        <Button variant="ghost" onClick={prevMonth}>
+          <ChevronLeft />
+        </Button>
+        {format(date, "MMMM yyyy")}
+        <Button variant="ghost" onClick={nextMonth}>
+          <ChevronRight />
+        </Button>
+      </div>
       <h1>{budget?.name}</h1>
     </div>
   );
