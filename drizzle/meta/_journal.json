@@ -50,6 +50,13 @@
       "when": 1711110395931,
       "tag": "0006_strong_tigra",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1711218748900,
+      "tag": "0007_happy_harry_osborn",
+      "breakpoints": true
     }
   ]
 }

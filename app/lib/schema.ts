@@ -231,11 +231,16 @@ export const transactionRelations = relations(bankTransactions, ({ one }) => ({
   }),
 }));
 
-export const budgets = sqliteTable("Budgets", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  userId: integer("user_id")
-    .references(() => users.id, { onDelete: "cascade" })
-    .notNull(),
-  startDate: timestamp("start_date").notNull(),
-  endDate: timestamp("end_date").notNull(),
-});
+export const budgets = sqliteTable(
+  "Budgets",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: integer("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    name: text("name").notNull(),
+  },
+  (budget) => ({
+    uniqueOn: uniqueIndex("unique_on").on(budget.userId, budget.name),
+  }),
+);

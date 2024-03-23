@@ -1,7 +1,6 @@
 import type { LoaderFunctionArgs } from "@remix-run/cloudflare";
 import { json, redirect } from "@remix-run/cloudflare";
 import { Outlet, useLoaderData } from "@remix-run/react";
-import { format } from "date-fns";
 import { eq } from "drizzle-orm";
 import { route } from "routes-gen";
 import { getDbFromContext } from "~/lib/db.service.server";
@@ -26,15 +25,17 @@ export default function Budget() {
   const { budgets } = useLoaderData<typeof loader>();
 
   return (
-    <div className="relative">
-      <Outlet />
-      <h1>Budget</h1>
-      <div>
-        {budgets.map((budget) => (
-          <div key={budget.id}>
-            {format(budget.startDate, "PPP")} - {format(budget.endDate, "PPP")}
-          </div>
-        ))}
+    <div className="relative flex">
+      <div className="min-w-36 px-4 ">
+        <h1 className="text-xl">Budgets</h1>
+        <ul>
+          {budgets.map((budget) => (
+            <h2 key={budget.id}>{budget.name}</h2>
+          ))}
+        </ul>
+      </div>
+      <div className="grow">
+        <Outlet />
       </div>
     </div>
   );
