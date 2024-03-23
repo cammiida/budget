@@ -1,10 +1,37 @@
-import type { LoaderFunctionArgs } from "@remix-run/cloudflare";
+import type {
+  ActionFunctionArgs,
+  LoaderFunctionArgs,
+} from "@remix-run/cloudflare";
 import { json, redirect } from "@remix-run/cloudflare";
-import { NavLink, Outlet, useLoaderData } from "@remix-run/react";
+import { Form, NavLink, Outlet, useLoaderData } from "@remix-run/react";
 import { eq } from "drizzle-orm";
+import { PlusCircle } from "lucide-react";
+import { useState } from "react";
 import { route } from "routes-gen";
+import { z } from "zod";
+import { Button } from "~/components/ui/button";
+import { Input } from "~/components/ui/input";
 import { getDbFromContext } from "~/lib/db.service.server";
-import { budgets as budgetTable } from "~/lib/schema";
+import { budgets as budgetTable, budgets } from "~/lib/schema";
+
+export async function action({ request, context }: ActionFunctionArgs) {
+  const user = context.user;
+  if (!user) {
+    return redirect(route("/auth/login"));
+  }
+
+  const schema = z.object({
+    name: z.string().min(2),
+  });
+
+  const formData = await request.formData();
+  const { name } = schema.parse(Object.fromEntries(formData));
+
+  const db = getDbFromContext(context);
+  await db.insert(budgets).values({ userId: user.id, name }).returning().get();
+
+  return redirect(route("/budgets"));
+}
 
 export async function loader({ context }: LoaderFunctionArgs) {
   const user = context.user;
@@ -23,24 +50,57 @@ export async function loader({ context }: LoaderFunctionArgs) {
 
 export default function Budgets() {
   const { budgets } = useLoaderData<typeof loader>();
+  const [isFormHidden, setIsFormHidden] = useState(true);
 
   return (
     <div className="relative flex">
-      <div className="min-w-36 px-4 ">
-        <h1 className="text-xl">Budgets</h1>
-        <ul>
+      <div className="min-w-56 p-4">
+        <h1 className="mb-4 text-xl">Budgets</h1>
+        <ul className="flex flex-col gap-4">
           {budgets.map((budget) => (
             <NavLink
               key={budget.id}
-              className={(isActive) =>
-                `${isActive && "bg-slate-200"} flex  grow items-center gap-2 rounded-md bg-slate-50 p-5 shadow-sm`
+              className={({ isActive }) =>
+                `${isActive && "underline"} flex grow items-center gap-2`
               }
               to={route("/budgets/:budgetName", { budgetName: budget.name })}
             >
-              <h2 key={budget.id}>{budget.name}</h2>
+              {budget.name}
             </NavLink>
           ))}
         </ul>
+
+        <div className="my-4">
+          {isFormHidden ? (
+            <Button
+              variant="secondary"
+              className="flex gap-2"
+              onClick={() => setIsFormHidden(false)}
+            >
+              <PlusCircle />
+              New budget
+            </Button>
+          ) : (
+            <Form
+              method="POST"
+              hidden={isFormHidden}
+              className="flex flex-col gap-4"
+            >
+              <Input name="name" placeholder="Budget name" />
+              <div className="flex gap-1">
+                <Button type="submit" className="self-start">
+                  Create budget
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => setIsFormHidden(true)}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </Form>
+          )}
+        </div>
       </div>
       <div className="grow">
         <Outlet />
