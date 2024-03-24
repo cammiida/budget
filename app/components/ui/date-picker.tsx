@@ -9,9 +9,14 @@ import { Calendar } from "./calendar";
 type DatePickerProps = {
   date: Date;
   setDate: (date: Date) => void;
+  dateFormat?: string;
 };
 
-export default function DatePicker({ date, setDate }: DatePickerProps) {
+export default function DatePicker({
+  date,
+  setDate,
+  dateFormat,
+}: DatePickerProps) {
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 
   return (
@@ -24,7 +29,7 @@ export default function DatePicker({ date, setDate }: DatePickerProps) {
             !date && "text-muted-foreground",
           )}
         >
-          {date ? format(date, "PPP") : <span>Pick a date</span>}
+          {date ? format(date, dateFormat ?? "PPP") : <span>Pick a date</span>}
           <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
         </Button>
       </PopoverTrigger>

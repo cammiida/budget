@@ -119,6 +119,9 @@ export const categories = sqliteTable(
     name: text("name").notNull(),
     color: text("color"),
     keywords: text("keywords", { mode: "json" }).$type<string[]>(),
+    categoryGroupId: integer("category_group_id")
+      .references(() => categoryGroups.id, { onDelete: "cascade" })
+      .notNull(),
   },
   (category) => ({
     uniqueOne: uniqueIndex("unique_on").on(category.userId, category.name),
@@ -132,6 +135,10 @@ export const categoryRelations = relations(categories, ({ one, many }) => ({
   user: one(users, {
     fields: [categories.userId],
     references: [users.id],
+  }),
+  categoryGroup: one(categoryGroups, {
+    fields: [categories.categoryGroupId],
+    references: [categoryGroups.id],
   }),
   transactions: many(bankTransactions),
 }));
@@ -242,5 +249,35 @@ export const budgets = sqliteTable(
   },
   (budget) => ({
     uniqueOn: uniqueIndex("unique_on").on(budget.userId, budget.name),
+  }),
+);
+
+export const budgetRelations = relations(budgets, ({ one, many }) => ({
+  user: one(users, {
+    fields: [budgets.userId],
+    references: [users.id],
+  }),
+  categoryGroups: many(categoryGroups),
+}));
+
+export const categoryGroups = sqliteTable("CategoryGroups", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("userId")
+    .references(() => users.id, { onDelete: "cascade" })
+    .notNull(),
+  budgetId: integer("budgetId")
+    .references(() => budgets.id, { onDelete: "cascade" })
+    .notNull(),
+  name: text("name").notNull(),
+});
+
+export const categoryGroupRelations = relations(
+  categoryGroups,
+  ({ one, many }) => ({
+    budget: one(budgets, {
+      fields: [categoryGroups.budgetId],
+      references: [budgets.id],
+    }),
+    categories: many(categories),
   }),
 );
