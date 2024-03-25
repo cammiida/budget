@@ -4,6 +4,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   ArrowRightLeft,
   ChevronDown,
+  CreditCard,
   LayoutList,
   LogOut,
   PieChart,
@@ -34,6 +35,11 @@ const ROUTES: Route[] = [
     name: "Banks",
     route: route("/banks"),
     icon: PiggyBank,
+  },
+  {
+    name: "Accounts",
+    route: route("/accounts"),
+    icon: CreditCard,
   },
   {
     name: "Transactions",

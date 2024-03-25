@@ -8,7 +8,9 @@ import {
   useLoaderData,
   useParams,
 } from "@remix-run/react";
+import { PlusCircle } from "lucide-react";
 import { route } from "routes-gen";
+import ActionHeader from "~/components/ui/action-header";
 import { Button } from "~/components/ui/button";
 import { requireUser } from "~/lib/auth.server";
 import { DbApi } from "~/lib/dbApi";
@@ -25,19 +27,24 @@ function Banks() {
   const { chosenBanks } = useLoaderData<typeof loader>();
 
   return (
-    <div className="mx-auto flex max-w-3xl items-start">
-      <div className="flex w-2/5 flex-col gap-4">
+    <>
+      <ActionHeader title="Banks">
         <Link to={route("/banks/new")} className="self-end">
-          <Button variant="secondary">Add bank</Button>
+          <Button variant="outline">
+            <PlusCircle className="mr-2" />
+            Add bank
+          </Button>
         </Link>
+      </ActionHeader>
+      <div className="relative top-16 flex w-2/5 flex-col gap-4 px-6 py-8">
         {chosenBanks.map((it) => (
           <BankComponent bank={it} key={it.bankId} />
         ))}
+        <div className="w-3/5 px-8">
+          <Outlet />
+        </div>
       </div>
-      <div className="w-3/5 px-8">
-        <Outlet />
-      </div>
-    </div>
+    </>
   );
 }
 
@@ -52,7 +59,7 @@ function BankComponent({ bank }: { bank: Bank }) {
 
   return (
     <NavLink
-      className={`${isActive && "bg-slate-200"} flex  grow items-center gap-2 rounded-md bg-slate-50 p-5 shadow-sm`}
+      className={`${isActive && "bg-rose-100"} flex  grow items-center gap-2 rounded-md bg-white p-5 shadow-sm`}
       to={route("/banks/:bankId", { bankId: bank.bankId })}
     >
       <img

@@ -1,8 +1,6 @@
 import type { LoaderFunctionArgs } from "@remix-run/cloudflare";
 import { json } from "@remix-run/cloudflare";
-import { Outlet, useFetcher, useLoaderData, useParams } from "@remix-run/react";
-import { route } from "routes-gen";
-import { Button } from "~/components/ui/button";
+import { Outlet, useLoaderData, useParams } from "@remix-run/react";
 import { DbApi } from "~/lib/dbApi";
 
 export async function loader(args: LoaderFunctionArgs) {
@@ -23,23 +21,8 @@ export default function Bank() {
   const { accounts } = useLoaderData<typeof loader>();
   const params = useParams();
 
-  const fetcher = useFetcher();
-
   return (
     <div className="flex flex-col items-center gap-4">
-      <div className="flex w-full justify-between">
-        <h1 className="text-lg">Accounts</h1>
-        <fetcher.Form method="POST" action={route("/api/sync-accounts")}>
-          <input type="hidden" name="bankId" value={params.bankId} />
-          <Button
-            variant="secondary"
-            type="submit"
-            disabled={fetcher.state !== "idle"}
-          >
-            Sync accounts
-          </Button>
-        </fetcher.Form>
-      </div>
       <ul className="flex w-full min-w-[400px] flex-col gap-4">
         {accounts.map((account) => {
           const balance = account.balances.find(
@@ -49,7 +32,7 @@ export default function Bank() {
           return (
             <li
               key={account.accountId}
-              className="flex min-w-full cursor-pointer flex-col gap-1 rounded-md bg-slate-100 p-4 shadow-lg"
+              className="flex min-w-full cursor-pointer flex-col gap-1 rounded-md bg-white p-4 shadow-lg"
             >
               <div className="flex w-full justify-between">
                 <h2 className="text-lg">
