@@ -1,10 +1,17 @@
 import type { LoaderFunctionArgs } from "@remix-run/cloudflare";
-import { json, useFetcher, useLoaderData, useParams } from "@remix-run/react";
+import {
+  Outlet,
+  json,
+  useFetcher,
+  useLoaderData,
+  useParams,
+} from "@remix-run/react";
 import { eq } from "drizzle-orm";
-import { RefreshCw } from "lucide-react";
+import { PlusCircle, RefreshCw } from "lucide-react";
 import { route } from "routes-gen";
 import ActionHeader from "~/components/ui/action-header";
 import { Button } from "~/components/ui/button";
+import LinkButton from "~/components/ui/link-button";
 import { requireUser } from "~/lib/auth.server";
 import { getDbFromContext } from "~/lib/db.service.server";
 import { accounts as accountsTable } from "~/lib/schema";
@@ -31,6 +38,13 @@ export default function Accounts() {
   return (
     <>
       <ActionHeader title="Accounts">
+        <LinkButton
+          variant="outline"
+          to={route("/accounts/new")}
+          icon={PlusCircle}
+        >
+          Add account
+        </LinkButton>
         <fetcher.Form method="POST" action={route("/api/sync-accounts")}>
           <input type="hidden" name="bankId" value={params.bankId} />
           <Button
@@ -46,6 +60,7 @@ export default function Accounts() {
         </fetcher.Form>
       </ActionHeader>
       <div className="relative top-16 px-6 py-8">
+        <Outlet />
         <div className="w-1/2 min-w-fit rounded-md bg-white px-6 py-8 shadow-sm">
           <ul className="flex w-full min-w-[400px] flex-col gap-4">
             {accounts.map((account) => {

@@ -3,7 +3,6 @@ import { redirect } from "@remix-run/cloudflare";
 import { route } from "routes-gen";
 
 export async function loader(args: LoaderFunctionArgs) {
-  console.log("index loader");
   const user = args.context.user;
 
   if (user) {
