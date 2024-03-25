@@ -104,3 +104,10 @@ export function getZodEnumFromObjectKeys<
   const [firstKey, ...otherKeys] = Object.keys(input) as [R, ...R[]];
   return z.enum([firstKey, ...otherKeys]);
 }
+
+export function prettifyAccountName(name: string) {
+  const split = name.split(",");
+  if (split.length === 1) return name;
+
+  return split.slice(0, -1).join(", ");
+}

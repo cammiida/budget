@@ -2,7 +2,6 @@ import type { LoaderFunctionArgs } from "@remix-run/cloudflare";
 import { json } from "@remix-run/cloudflare";
 import {
   Link,
-  NavLink,
   Outlet,
   useFetcher,
   useLoaderData,
@@ -36,11 +35,11 @@ function Banks() {
           </Button>
         </Link>
       </ActionHeader>
-      <div className="relative top-16 flex w-2/5 flex-col gap-4 px-6 py-8">
+      <div className="relative top-16 flex flex-col gap-4 px-6 py-8">
         {chosenBanks.map((it) => (
           <BankComponent bank={it} key={it.bankId} />
         ))}
-        <div className="w-3/5 px-8">
+        <div className="px-8">
           <Outlet />
         </div>
       </div>
@@ -58,9 +57,8 @@ function BankComponent({ bank }: { bank: Bank }) {
   const isActive = params.bankId === bank.bankId;
 
   return (
-    <NavLink
+    <div
       className={`${isActive && "bg-rose-100"} flex  grow items-center gap-2 rounded-md bg-white p-5 shadow-sm`}
-      to={route("/banks/:bankId", { bankId: bank.bankId })}
     >
       <img
         className="h-8 w-8 rounded-full"
@@ -74,17 +72,10 @@ function BankComponent({ bank }: { bank: Bank }) {
         className="ml-auto"
       >
         <input type="hidden" name="bankId" value={bank.bankId} />
-        <Button
-          variant="destructive"
-          type="submit"
-          disabled={isDeleting}
-          onClick={(e) => {
-            e.stopPropagation(); // stop click on card
-          }}
-        >
+        <Button variant="destructive" type="submit" disabled={isDeleting}>
           {isDeleting ? "Deleting..." : "Delete"}
         </Button>
       </fetcher.Form>
-    </NavLink>
+    </div>
   );
 }

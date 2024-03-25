@@ -59,6 +59,7 @@ import {
 import {
   formatDate,
   getZodEnumFromObjectKeys,
+  prettifyAccountName,
   transformRemoteTransactions,
 } from "~/lib/utils";
 
@@ -525,11 +526,4 @@ function CheckBoxFilterGroup<TData>(props: CheckBoxFilterGroupProps<TData>) {
 
 function toLocaleDateString(date: Date) {
   return formatISO9075(date, { representation: "date" });
-}
-
-function prettifyAccountName(name: string) {
-  const split = name.split(",");
-  if (split.length === 1) return name;
-
-  return split.slice(0, -1).join(", ");
 }
