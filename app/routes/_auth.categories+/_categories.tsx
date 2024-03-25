@@ -5,7 +5,7 @@ import type {
   SerializeFrom,
 } from "@remix-run/cloudflare";
 import { json } from "@remix-run/cloudflare";
-import { Form, Outlet, useLoaderData, useNavigate } from "@remix-run/react";
+import { Form, Outlet, useLoaderData } from "@remix-run/react";
 import { and, eq } from "drizzle-orm";
 import { PlusCircle } from "lucide-react";
 import { useState } from "react";
@@ -14,6 +14,7 @@ import { z } from "zod";
 import ActionHeader from "~/components/ui/action-header";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
+import LinkButton from "~/components/ui/link-button";
 import { requireUser } from "~/lib/auth.server";
 import { getDbFromContext } from "~/lib/db.service.server";
 import { DbApi } from "~/lib/dbApi";
@@ -83,18 +84,17 @@ export async function action({ request, context }: ActionFunctionArgs) {
 
 export default function Categories() {
   const { categories } = useLoaderData<typeof loader>();
-  const navigate = useNavigate();
 
   return (
     <>
       <ActionHeader title="Categories">
-        <Button
+        <LinkButton
           variant="outline"
-          onClick={() => navigate(route("/categories/create"))}
+          to={route("/categories/create")}
+          icon={PlusCircle}
         >
-          <PlusCircle className="mr-2" />
           New category
-        </Button>
+        </LinkButton>
       </ActionHeader>
       <div className="relative top-16 mx-auto flex max-w-xl flex-col gap-4 px-6 py-8">
         <Outlet />

@@ -75,10 +75,10 @@ export default function Budgets() {
             {isFormHidden ? (
               <Button
                 variant="outline"
-                className="flex gap-2 bg-white"
+                className="bg-white"
                 onClick={() => setIsFormHidden(false)}
               >
-                <PlusCircle />
+                <PlusCircle className="mr-2 h-4 w-4" />
                 New budget
               </Button>
             ) : (

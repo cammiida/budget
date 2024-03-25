@@ -1,16 +1,11 @@
 import type { LoaderFunctionArgs } from "@remix-run/cloudflare";
 import { json } from "@remix-run/cloudflare";
-import {
-  Link,
-  Outlet,
-  useFetcher,
-  useLoaderData,
-  useParams,
-} from "@remix-run/react";
+import { Outlet, useFetcher, useLoaderData, useParams } from "@remix-run/react";
 import { PlusCircle } from "lucide-react";
 import { route } from "routes-gen";
 import ActionHeader from "~/components/ui/action-header";
 import { Button } from "~/components/ui/button";
+import LinkButton from "~/components/ui/link-button";
 import { requireUser } from "~/lib/auth.server";
 import { DbApi } from "~/lib/dbApi";
 import type { Bank } from "~/lib/schema";
@@ -28,12 +23,13 @@ function Banks() {
   return (
     <>
       <ActionHeader title="Banks">
-        <Link to={route("/banks/new")} className="self-end">
-          <Button variant="outline">
-            <PlusCircle className="mr-2" />
-            Add bank
-          </Button>
-        </Link>
+        <LinkButton
+          variant="outline"
+          to={route("/banks/new")}
+          icon={PlusCircle}
+        >
+          Add bank
+        </LinkButton>
       </ActionHeader>
       <div className="relative top-16 flex flex-col gap-4 px-6 py-8">
         {chosenBanks.map((it) => (
