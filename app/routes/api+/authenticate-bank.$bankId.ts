@@ -1,10 +1,12 @@
 import type { LoaderFunctionArgs } from "@remix-run/cloudflare";
 import { redirect } from "@remix-run/cloudflare";
 import { ApiError } from "generated-sources/gocardless";
+import { requireUser } from "~/lib/auth.server";
 import { DbApi } from "~/lib/dbApi";
 import { GoCardlessApi } from "~/lib/gocardless-api.server";
 
 export async function loader({ context, request, params }: LoaderFunctionArgs) {
+  requireUser(context);
   const bankId = params.bankId!;
 
   const db = DbApi.create({ context });

@@ -11,6 +11,7 @@ import { route } from "routes-gen";
 import { z } from "zod";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
+import { requireUser } from "~/lib/auth.server";
 import { getDbFromContext } from "~/lib/db.service.server";
 import { budgets, categoryGroups } from "~/lib/schema";
 
@@ -19,10 +20,7 @@ const createCategoryGroupSchema = z.object({
 });
 
 export async function action({ request, context, params }: ActionFunctionArgs) {
-  const user = context.user;
-  if (!user) {
-    return redirect(route("/auth/login"));
-  }
+  const user = requireUser(context);
 
   const formData = await request.formData();
 
@@ -64,7 +62,7 @@ const dateSchema = z
 export async function loader({ context, params }: LoaderFunctionArgs) {
   const user = context.user;
   if (!user) {
-    return redirect(route("/auth/login"));
+    return redirect(route("/login"));
   }
   const budgetName = params.budgetName;
   if (!budgetName) {

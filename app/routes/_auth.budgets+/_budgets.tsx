@@ -11,13 +11,14 @@ import { route } from "routes-gen";
 import { z } from "zod";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
+import { requireUser } from "~/lib/auth.server";
 import { getDbFromContext } from "~/lib/db.service.server";
 import { budgets as budgetTable, budgets } from "~/lib/schema";
 
 export async function action({ request, context }: ActionFunctionArgs) {
   const user = context.user;
   if (!user) {
-    return redirect(route("/auth/login"));
+    return redirect(route("/login"));
   }
 
   const schema = z.object({
@@ -34,11 +35,9 @@ export async function action({ request, context }: ActionFunctionArgs) {
 }
 
 export async function loader({ context }: LoaderFunctionArgs) {
-  const user = context.user;
-  if (!user) {
-    return redirect(route("/auth/login"));
-  }
+  const user = requireUser(context);
   const db = getDbFromContext(context);
+
   const budgets = await db
     .select()
     .from(budgetTable)

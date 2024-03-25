@@ -4,6 +4,7 @@ import type {
 } from "@remix-run/cloudflare";
 import { redirect } from "@remix-run/cloudflare";
 import { Form } from "@remix-run/react";
+import { route } from "routes-gen";
 import { Button } from "~/components/ui/button";
 import { authenticate } from "~/lib/auth.server";
 import { flashSession } from "~/lib/cookie.server";
@@ -20,7 +21,7 @@ export async function action(args: ActionFunctionArgs) {
       "Uh oh! Login failed. Please check your email and password and try again.",
     );
 
-    return redirect("/auth/login", {
+    return redirect(route("/login"), {
       headers: {
         "Set-Cookie": await flashSessionCookie.commitSession(fSession),
       },

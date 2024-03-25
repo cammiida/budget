@@ -12,6 +12,7 @@ import {
   RequisitionsService,
 } from "generated-sources/gocardless";
 import type { Bank } from "./schema";
+import { requireUser } from "./auth.server";
 
 export class GoCardlessApi {
   private context: AppLoadContext;
@@ -27,11 +28,7 @@ export class GoCardlessApi {
   }
 
   getCurrentUser() {
-    const user = this.context.user;
-    if (!user) {
-      throw redirect("/auth/login");
-    }
-    return user;
+    return requireUser(this.context);
   }
 
   async getBank({ bankId }: { bankId: string }): Promise<Bank> {

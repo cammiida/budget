@@ -8,6 +8,7 @@ import {
   createGoogleStrategy,
 } from "./google-strategy.server";
 import type { ServerArgs } from "./types";
+import type { AppLoadContext } from "@remix-run/cloudflare";
 import { redirect } from "@remix-run/cloudflare";
 import { route } from "routes-gen";
 
@@ -27,22 +28,24 @@ export function authenticate(args: ServerArgs) {
     args.request,
     {
       successRedirect: route("/"),
-      failureRedirect: route("/auth/login"),
+      failureRedirect: route("/login"),
     },
   );
 }
 
 export function logout(args: ServerArgs) {
   return createAuthenticator(args).logout(args.request, {
-    redirectTo: route("/auth/login"),
+    redirectTo: route("/login"),
   });
 }
 
-export async function requireLogin(args: ServerArgs) {
-  const user = args.context.user;
+export function requireUser(context: AppLoadContext) {
+  const user = context.user;
   if (!user) {
-    throw redirect(route("/auth/login"));
+    throw redirect(route("/login"));
   }
+
+  return user;
 }
 
 export async function getUserSession(args: ServerArgs) {

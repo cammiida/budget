@@ -21,7 +21,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "~/components/ui/popover";
-import { requireLogin } from "~/lib/auth.server";
+import { requireUser } from "~/lib/auth.server";
 import { DbApi } from "~/lib/dbApi";
 import { GoCardlessApi } from "~/lib/gocardless-api.server";
 import { cn } from "~/lib/utils";
@@ -78,8 +78,8 @@ export async function action({ context, request }: ActionFunctionArgs) {
   }
 }
 
-export async function loader({ context, request }: LoaderFunctionArgs) {
-  await requireLogin({ context, request });
+export async function loader({ context }: LoaderFunctionArgs) {
+  requireUser(context);
 
   const goCardlessApi = GoCardlessApi.create({ context });
   const banks = await goCardlessApi.getAllBanks();

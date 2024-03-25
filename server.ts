@@ -6,6 +6,7 @@ import * as build from "@remix-run/dev/server-build";
 import { envSchema } from "env.server";
 import type { SpectacularJWTObtain } from "generated-sources/gocardless";
 import { TokenService } from "generated-sources/gocardless";
+import { route } from "routes-gen";
 import type { GoogleSession } from "~/lib/cookie.server";
 import {
   createSessionStorage,
@@ -17,9 +18,9 @@ import {
 import { GoogleStrategy } from "~/lib/google-strategy.server";
 
 const ALLOW_UNAUTHENTICATED: `/${string}`[] = [
-  "/auth/login",
-  "/auth/google/callback",
-  "/auth/logout",
+  route("/login"),
+  route("/logout"),
+  route("/auth/google/callback"),
 ] as const;
 
 type PagesContext = { DB: D1Database };
@@ -64,7 +65,7 @@ export const onRequest: ReturnType<
 
   const url = new URL(context.request.url);
   if (!user && !ALLOW_UNAUTHENTICATED.some((it) => it === url.pathname)) {
-    return redirect("/auth/login");
+    return redirect(route("/login"));
   }
 
   const handler = createPagesFunctionHandler({

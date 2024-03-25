@@ -4,10 +4,12 @@ import { route } from "routes-gen";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import Modal from "~/components/ui/modal";
+import { requireUser } from "~/lib/auth.server";
 import { getDbFromContext } from "~/lib/db.service.server";
 import { categories, createCategory } from "~/lib/schema";
 
 export async function action({ request, context }: ActionFunctionArgs) {
+  const user = requireUser(context);
   const formData = await request.formData();
 
   const data = createCategory
@@ -15,14 +17,9 @@ export async function action({ request, context }: ActionFunctionArgs) {
     .parse(Object.fromEntries(formData));
 
   const db = getDbFromContext(context);
-  const userId = context.user?.id;
-  if (!userId) {
-    return redirect(route("/auth/login"));
-  }
-
   const createdCategory = await db
     .insert(categories)
-    .values({ ...data, userId })
+    .values({ ...data, userId: user.id })
     .onConflictDoNothing();
 
   if (!createdCategory) {

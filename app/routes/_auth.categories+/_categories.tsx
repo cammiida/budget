@@ -4,7 +4,7 @@ import type {
   LoaderFunctionArgs,
   SerializeFrom,
 } from "@remix-run/cloudflare";
-import { json, redirect } from "@remix-run/cloudflare";
+import { json } from "@remix-run/cloudflare";
 import { Form, Outlet, useLoaderData, useNavigate } from "@remix-run/react";
 import { and, eq } from "drizzle-orm";
 import { useState } from "react";
@@ -12,6 +12,7 @@ import { route } from "routes-gen";
 import { z } from "zod";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
+import { requireUser } from "~/lib/auth.server";
 import { getDbFromContext } from "~/lib/db.service.server";
 import { DbApi } from "~/lib/dbApi";
 import { categories } from "~/lib/schema";
@@ -45,6 +46,7 @@ async function updateCategoryAction(
   formData: FormData,
   context: AppLoadContext,
 ) {
+  const user = requireUser(context);
   const data = z
     .object({
       id: z.string().transform((arg) => Number(arg)),
@@ -52,16 +54,11 @@ async function updateCategoryAction(
     })
     .parse(Object.fromEntries(formData));
 
-  const userId = context.user?.id;
-  if (!userId) {
-    return redirect(route("/auth/login"));
-  }
-
   const db = getDbFromContext(context);
   await db
     .update(categories)
     .set({ keywords: data.keywords })
-    .where(and(eq(categories.id, data.id), eq(categories.userId, userId)));
+    .where(and(eq(categories.id, data.id), eq(categories.userId, user.id)));
 
   return json({ success: true });
 }

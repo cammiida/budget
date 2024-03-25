@@ -10,12 +10,12 @@ import {
 } from "@remix-run/react";
 import { route } from "routes-gen";
 import { Button } from "~/components/ui/button";
-import { requireLogin } from "~/lib/auth.server";
+import { requireUser } from "~/lib/auth.server";
 import { DbApi } from "~/lib/dbApi";
 import type { Bank } from "~/lib/schema";
 
 export async function loader({ context, request }: LoaderFunctionArgs) {
-  await requireLogin({ context, request });
+  requireUser(context);
   const chosenBanks = await DbApi.create({ context }).getBanks();
 
   return json({ chosenBanks });

@@ -4,7 +4,7 @@ import type {
   LoaderFunctionArgs,
   SerializeFrom,
 } from "@remix-run/cloudflare";
-import { json, redirect } from "@remix-run/cloudflare";
+import { json } from "@remix-run/cloudflare";
 import {
   Form,
   Outlet,
@@ -43,6 +43,7 @@ import {
   SelectValue,
 } from "~/components/ui/select";
 import { LargeText } from "~/components/ui/typography";
+import { requireUser } from "~/lib/auth.server";
 import type { Intent } from "~/lib/constants";
 import { INTENTS, SPENDING_TYPES, WANT_OR_NEED } from "~/lib/constants";
 import { getDbFromContext } from "~/lib/db.service.server";
@@ -73,20 +74,16 @@ export const transactionStringSchema = z.string().transform((arg) => {
 });
 
 export async function loader({ context }: LoaderFunctionArgs) {
-  const userId = context.user?.id;
-
-  if (!userId) {
-    return redirect("/auth/login", { status: 401 });
-  }
+  const user = requireUser(context);
 
   const db = getDbFromContext(context);
   const allCategories = await db.query.categories.findMany({
     columns: { name: true, id: true, keywords: true },
-    where: eq(categories.userId, userId),
+    where: eq(categories.userId, user.id),
   });
 
   const transactions = await db.query.bankTransactions.findMany({
-    where: eq(transactionTable.userId, userId),
+    where: eq(transactionTable.userId, user.id),
     orderBy: desc(transactionTable.valueDate),
     columns: {
       additionalInformation: true,
@@ -149,10 +146,7 @@ async function syncTransactions({ context, userId }: SyncTransactionsArgs) {
 }
 
 export async function action({ request, context }: ActionFunctionArgs) {
-  const user = context.user;
-  if (!user) {
-    return redirect("/auth/login", { status: 401 });
-  }
+  const user = requireUser(context);
 
   const formData = await request.formData();
 
@@ -182,10 +176,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
       return json({ success: true, transaction: updatedTransactions[0] });
     }
     case "updateSpendingType": {
-      const user = context.user;
-      if (!user) {
-        return redirect("/auth/login", { status: 401 });
-      }
+      const user = requireUser(context);
 
       const spendingType =
         formData.get("value") !== "null"
@@ -210,10 +201,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
       return json({ success: true, transaction: updatedTransaction });
     }
     case "updateWantOrNeed": {
-      const user = context.user;
-      if (!user) {
-        return redirect("/auth/login", { status: 401 });
-      }
+      const user = requireUser(context);
 
       const wantOrNeed =
         formData.get("value") !== "null"
@@ -383,7 +371,7 @@ export default function Transactions() {
   });
 
   return (
-    <div className="relative">
+    <div className="relative pt-8">
       <Outlet />
       {!!actionData && !actionData.success && (
         <div className="absolute left-1/2 w-96 -translate-x-1/2 transform rounded-md border border-red-300 bg-red-200 px-8 py-4 text-center">
@@ -391,7 +379,7 @@ export default function Transactions() {
         </div>
       )}
       <div className="mb-4 flex items-end justify-between">
-        <h1 className="text-xl">Transactions</h1>
+        <h1 className="text-2xl font-bold">Transactions</h1>
         <div className="flex items-center gap-2">
           <Button
             onClick={() => navigate(route("/transactions/suggest-categories"))}

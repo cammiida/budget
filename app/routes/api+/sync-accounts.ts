@@ -1,20 +1,17 @@
 import type { ActionFunctionArgs } from "@remix-run/cloudflare";
-import { json, redirect } from "@remix-run/cloudflare";
+import { json } from "@remix-run/cloudflare";
+import { requireUser } from "~/lib/auth.server";
 import { DbApi } from "~/lib/dbApi";
 import { GoCardlessApi } from "~/lib/gocardless-api.server";
 import type { NewAccount } from "~/lib/schema";
 
 export async function action({ context, request }: ActionFunctionArgs) {
+  const user = requireUser(context);
   const formData = await request.formData();
   const bankId = formData.get("bankId")?.toString();
 
   if (!bankId) {
     throw new Response("Bank ID is required", { status: 400 });
-  }
-
-  const user = context.user;
-  if (!user) {
-    throw redirect("/login");
   }
 
   try {

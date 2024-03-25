@@ -27,6 +27,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog";
+import { requireUser } from "~/lib/auth.server";
 import { getDbFromContext } from "~/lib/db.service.server";
 import { DbApi } from "~/lib/dbApi";
 import {
@@ -37,11 +38,7 @@ import { formatDate } from "~/lib/utils";
 import { transactionStringSchema } from "./_transactions";
 
 export async function loader({ context }: LoaderFunctionArgs) {
-  const user = context.user;
-  if (!user) {
-    return redirect(route("/auth/login"));
-  }
-
+  const user = requireUser(context);
   const db = getDbFromContext(context);
 
   const [transactions, categories] = await db.batch([

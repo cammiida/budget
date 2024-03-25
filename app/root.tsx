@@ -21,7 +21,6 @@ import { ApiError } from "generated-sources/gocardless";
 import { getUserSession } from "./lib/auth.server";
 import { flashSession } from "./lib/cookie.server";
 import styles from "./tailwind.css";
-import { Navbar } from "./components/ui/navbar";
 
 export const links: LinksFunction = () => [{ rel: "stylesheet", href: styles }];
 
@@ -69,12 +68,7 @@ export default function App() {
         <Links />
       </head>
       <body>
-        <div className="w-64">
-          <Navbar />
-        </div>
-        <div className="ml-64 max-h-screen min-h-screen overflow-auto px-6">
-          <Outlet />
-        </div>
+        <Outlet />
         <ScrollRestoration />
         <Scripts />
         <LiveReload />
