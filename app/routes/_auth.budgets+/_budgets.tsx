@@ -9,6 +9,7 @@ import { PlusCircle } from "lucide-react";
 import { useState } from "react";
 import { route } from "routes-gen";
 import { z } from "zod";
+import ActionHeader from "~/components/ui/action-header";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { requireUser } from "~/lib/auth.server";
@@ -52,58 +53,60 @@ export default function Budgets() {
   const [isFormHidden, setIsFormHidden] = useState(true);
 
   return (
-    <div className="relative flex">
-      <div className="min-w-56 p-4">
-        <h1 className="mb-4 text-xl">Budgets</h1>
-        <ul className="flex flex-col gap-4">
-          {budgets.map((budget) => (
-            <NavLink
-              key={budget.id}
-              className={({ isActive }) =>
-                `${isActive && "underline"} flex grow items-center gap-2`
-              }
-              to={route("/budgets/:budgetName", { budgetName: budget.name })}
-            >
-              {budget.name}
-            </NavLink>
-          ))}
-        </ul>
+    <>
+      <ActionHeader title="Budgets"></ActionHeader>
+      <div className="relative top-16 flex">
+        <div className="min-w-56 p-4">
+          <ul className="flex flex-col gap-4">
+            {budgets.map((budget) => (
+              <NavLink
+                key={budget.id}
+                className={({ isActive }) =>
+                  `${isActive && "underline"} flex grow items-center gap-2`
+                }
+                to={route("/budgets/:budgetName", { budgetName: budget.name })}
+              >
+                {budget.name}
+              </NavLink>
+            ))}
+          </ul>
 
-        <div className="my-4">
-          {isFormHidden ? (
-            <Button
-              variant="secondary"
-              className="flex gap-2"
-              onClick={() => setIsFormHidden(false)}
-            >
-              <PlusCircle />
-              New budget
-            </Button>
-          ) : (
-            <Form
-              method="POST"
-              hidden={isFormHidden}
-              className="flex flex-col gap-4"
-            >
-              <Input name="name" placeholder="Budget name" />
-              <div className="flex gap-1">
-                <Button type="submit" className="self-start">
-                  Create budget
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={() => setIsFormHidden(true)}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </Form>
-          )}
+          <div className="my-4">
+            {isFormHidden ? (
+              <Button
+                variant="outline"
+                className="flex gap-2 bg-white"
+                onClick={() => setIsFormHidden(false)}
+              >
+                <PlusCircle />
+                New budget
+              </Button>
+            ) : (
+              <Form
+                method="POST"
+                hidden={isFormHidden}
+                className="flex flex-col gap-4"
+              >
+                <Input name="name" placeholder="Budget name" />
+                <div className="flex gap-1">
+                  <Button type="submit" className="self-start">
+                    Create budget
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={() => setIsFormHidden(true)}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </Form>
+            )}
+          </div>
+        </div>
+        <div className="grow">
+          <Outlet />
         </div>
       </div>
-      <div className="grow">
-        <Outlet />
-      </div>
-    </div>
+    </>
   );
 }

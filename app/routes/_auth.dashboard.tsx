@@ -1,3 +1,10 @@
+import ActionHeader from "~/components/ui/action-header";
+
 export default function Dashboard() {
-  return <div>Dashboard!</div>;
+  return (
+    <>
+      <ActionHeader title="Dashboard" />
+      <div className="relative top-16"></div>
+    </>
+  );
 }
