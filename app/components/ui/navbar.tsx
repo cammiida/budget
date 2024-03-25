@@ -17,7 +17,7 @@ import type { GoogleSession } from "~/lib/cookie.server";
 import { useRootData } from "~/root";
 import { Avatar, AvatarFallback, AvatarImage } from "./avatar";
 import { Button } from "./button";
-import { Separator } from "./separator";
+import { Separator as DefaultSeparator } from "./separator";
 
 type Route = {
   name: string;
@@ -56,37 +56,37 @@ export function Navbar() {
   return (
     <aside
       id="default-sidebar"
-      className="fixed left-0 top-0 z-40 h-dvh w-64"
+      className="fixed left-0 top-0 z-40 h-dvh w-64 bg-rose-500 text-white shadow-sm"
       aria-label="Sidebar"
     >
-      <div className="flex h-full flex-col overflow-y-auto bg-gray-50 dark:bg-gray-800">
+      <div className="flex h-full flex-col overflow-y-auto ">
         <Link
           to={route("/")}
-          className="flex h-16 flex-none items-center bg-gray-100 p-4 text-2xl font-semibold rtl:space-x-reverse"
+          className="flex h-16 flex-none items-center p-4 text-2xl font-semibold rtl:space-x-reverse"
         >
-          YoBu
+          YourBudget
         </Link>
-        <Separator className="flex-none" />
+        <Separator />
         <div className="flex h-full flex-col justify-between font-medium">
           <ul className="space-y-2 px-3 py-4">
             {ROUTES.map((route) => (
               <RouteNavLink key={route.route} route={route} />
             ))}
           </ul>
-          <div className="w-full justify-self-end bg-gray-100">
+          <div className="w-full justify-self-end ">
             {user && <UserMenu isOpen={isUserMenuOpen} user={user} />}
             <Separator />
             <Button
               variant="ghost"
               type="button"
-              className="flex h-16 w-full items-center justify-between text-sm"
+              className="flex h-16 w-full items-center justify-between rounded-none text-sm hover:bg-rose-400 hover:text-white"
               aria-expanded="false"
               onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
             >
               <div className="flex items-center gap-2">
                 <Avatar>
                   <AvatarImage src={user?.avatar} alt={user?.displayName} />
-                  <AvatarFallback className="bg-slate-200">
+                  <AvatarFallback className="bg-blue-400">
                     {user?.displayName
                       .split(" ")
                       .map((it) => it[0])
@@ -117,13 +117,13 @@ function UserMenu({
     <>
       <div
         className={
-          "relative list-none divide-gray-100 overflow-hidden text-base transition-[height]" +
+          "relative list-none overflow-hidden text-base transition-[height]" +
           " " +
           (isOpen ? "h-52 " : "h-0 overflow-hidden")
         }
       >
         <Separator />
-        <small className="block h-12 truncate px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+        <small className="block h-12 truncate px-4 py-3 text-sm">
           {user?.email}
         </small>
         <Separator />
@@ -153,11 +153,15 @@ function RouteNavLink({
       key={routeName}
       to={route}
       className={({ isActive }) =>
-        `${isActive && "bg-slate-200"} group flex items-center rounded-lg p-2 text-gray-900 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700`
+        `${isActive && "bg-rose-600"} group flex items-center rounded-lg p-2  hover:bg-rose-400 `
       }
     >
-      <Icon className="h-5 w-5 text-gray-500 transition duration-75 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-white" />
+      <Icon className="h-5 w-5 transition duration-75" />
       <span className="ms-3">{routeName}</span>
     </NavLink>
   );
+}
+
+function Separator() {
+  return <DefaultSeparator className="bg-rose-400" />;
 }

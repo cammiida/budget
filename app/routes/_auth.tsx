@@ -7,7 +7,7 @@ export default function AuthenticatedLayout() {
       <div className="w-64">
         <Navbar />
       </div>
-      <div className="ml-64 max-h-screen min-h-screen overflow-auto px-6">
+      <div className="ml-64 max-h-screen min-h-screen overflow-auto bg-rose-50">
         <Outlet />
       </div>
     </>

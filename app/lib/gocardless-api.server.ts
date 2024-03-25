@@ -1,5 +1,4 @@
 import type { AppLoadContext } from "@remix-run/cloudflare";
-import { redirect } from "@remix-run/cloudflare";
 import type {
   BankTransactionStatusSchema,
   RequisitionRequest,
@@ -11,8 +10,8 @@ import {
   OpenAPI,
   RequisitionsService,
 } from "generated-sources/gocardless";
-import type { Bank } from "./schema";
 import { requireUser } from "./auth.server";
+import type { Bank } from "./schema";
 
 export class GoCardlessApi {
   private context: AppLoadContext;

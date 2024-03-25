@@ -371,24 +371,23 @@ export default function Transactions() {
   });
 
   return (
-    <div className="relative pt-8">
-      <Outlet />
-      {!!actionData && !actionData.success && (
-        <div className="absolute left-1/2 w-96 -translate-x-1/2 transform rounded-md border border-red-300 bg-red-200 px-8 py-4 text-center">
-          Something went wrong 😬
-        </div>
-      )}
-      <div className="mb-4 flex items-end justify-between">
-        <h1 className="text-2xl font-bold">Transactions</h1>
+    <>
+      <div className="fixed top-0 z-50 flex h-16 w-[calc(100%-16rem)] items-center justify-between bg-white px-4 shadow-sm">
+        <h1 className="text-lg font-semibold">Transactions</h1>
         <div className="flex items-center gap-2">
           <Button
+            variant="outline"
             onClick={() => navigate(route("/transactions/suggest-categories"))}
           >
             Suggest categories
           </Button>
           <Form method="POST">
             <input readOnly hidden name="intent" value="sync" />
-            <Button disabled={isNavigating} className="flex gap-2">
+            <Button
+              variant="outline"
+              disabled={isNavigating}
+              className="flex gap-2"
+            >
               <RefreshCw
                 className={`h-4 w-4 ${isNavigating && "animate-spin"}`}
               />
@@ -397,41 +396,49 @@ export default function Transactions() {
           </Form>
         </div>
       </div>
-
-      <DataTable table={table}>
-        <Input
-          placeholder="Filter transactions..."
-          value={globalFilter}
-          onChange={(event) => setGlobalFilter(event.target.value)}
-          className="float-start max-w-sm"
-        />
-        <DataTablePagination table={table} />
-        <DataTableFilter>
-          <div className="relative flex flex-col gap-6 p-2">
-            <CheckBoxFilterGroup
-              header="Banks"
-              column={table.getColumn("bank")}
-              values={[...uniqueBanks]}
-            />
-            <CheckBoxFilterGroup
-              header="Accounts"
-              column={table.getColumn("account")}
-              values={[...uniqueAccountNames]}
-            />
-            <CheckBoxFilterGroup
-              header="Spending Type"
-              column={table.getColumn("spendingType")}
-              values={Object.values(SPENDING_TYPES)}
-            />
-            <CheckBoxFilterGroup
-              header="Want/Need"
-              column={table.getColumn("wantOrNeed")}
-              values={Object.values(WANT_OR_NEED)}
-            />
+      <div className="relative top-10 px-6 py-8">
+        <Outlet />
+        {!!actionData && !actionData.success && (
+          <div className="absolute left-1/2 w-96 -translate-x-1/2 transform rounded-md border border-red-300 bg-red-200 px-8 py-4 text-center">
+            Something went wrong 😬
           </div>
-        </DataTableFilter>
-      </DataTable>
-    </div>
+        )}
+
+        <DataTable table={table}>
+          <Input
+            placeholder="Filter transactions..."
+            value={globalFilter}
+            onChange={(event) => setGlobalFilter(event.target.value)}
+            className="float-start max-w-sm"
+          />
+          <DataTablePagination table={table} />
+          <DataTableFilter>
+            <div className="relative flex flex-col gap-6 p-2">
+              <CheckBoxFilterGroup
+                header="Banks"
+                column={table.getColumn("bank")}
+                values={[...uniqueBanks]}
+              />
+              <CheckBoxFilterGroup
+                header="Accounts"
+                column={table.getColumn("account")}
+                values={[...uniqueAccountNames]}
+              />
+              <CheckBoxFilterGroup
+                header="Spending Type"
+                column={table.getColumn("spendingType")}
+                values={Object.values(SPENDING_TYPES)}
+              />
+              <CheckBoxFilterGroup
+                header="Want/Need"
+                column={table.getColumn("wantOrNeed")}
+                values={Object.values(WANT_OR_NEED)}
+              />
+            </div>
+          </DataTableFilter>
+        </DataTable>
+      </div>
+    </>
   );
 }
 
