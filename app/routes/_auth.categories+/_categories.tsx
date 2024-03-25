@@ -7,9 +7,11 @@ import type {
 import { json } from "@remix-run/cloudflare";
 import { Form, Outlet, useLoaderData, useNavigate } from "@remix-run/react";
 import { and, eq } from "drizzle-orm";
+import { PlusCircle } from "lucide-react";
 import { useState } from "react";
 import { route } from "routes-gen";
 import { z } from "zod";
+import ActionHeader from "~/components/ui/action-header";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { requireUser } from "~/lib/auth.server";
@@ -84,28 +86,31 @@ export default function Categories() {
   const navigate = useNavigate();
 
   return (
-    <div className="mx-auto flex max-w-xl flex-col gap-4">
-      <Outlet />
-      <div className="flex justify-between">
-        <h1 className="text-xl">Categories</h1>
+    <>
+      <ActionHeader title="Categories">
         <Button
-          variant="secondary"
+          variant="outline"
           onClick={() => navigate(route("/categories/create"))}
         >
+          <PlusCircle className="mr-2" />
           New category
         </Button>
+      </ActionHeader>
+      <div className="relative top-16 mx-auto flex max-w-xl flex-col gap-4 px-6 py-8">
+        <Outlet />
+        <div className="flex justify-between"></div>
+        <table className="w-full border">
+          <tr className="border border-rose-100">
+            <th className="bg-white p-4 text-left ">Name</th>
+            <th className="bg-white p-4 text-left">Keywords</th>
+            <th className="bg-white p-4 "></th>
+          </tr>
+          {categories.map((category) => (
+            <CategoryRow key={category.id} category={category} />
+          ))}
+        </table>
       </div>
-      <table className="w-full border">
-        <tr className="border border-slate-100">
-          <th className="bg-slate-100 p-4 text-left ">Name</th>
-          <th className="bg-slate-100 p-4 text-left">Keywords</th>
-          <th className="bg-slate-100 p-4 "></th>
-        </tr>
-        {categories.map((category) => (
-          <CategoryRow key={category.id} category={category} />
-        ))}
-      </table>
-    </div>
+    </>
   );
 }
 
@@ -118,7 +123,7 @@ function CategoryRow({ category }: { category: ClientCategory }) {
   const hasChanged = keywordsInputValue !== category.keywords?.join(", ");
 
   return (
-    <tr key={category.id} className="border border-slate-100">
+    <tr key={category.id} className="border border-rose-100">
       <td className="p-4">{category.name}</td>
       <td className="p-4">
         <Input

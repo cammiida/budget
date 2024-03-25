@@ -28,6 +28,7 @@ import { RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { route } from "routes-gen";
 import { z } from "zod";
+import ActionHeader from "~/components/ui/action-header";
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
 import { DataTable, SortableHeaderCell } from "~/components/ui/data-table";
@@ -372,31 +373,28 @@ export default function Transactions() {
 
   return (
     <>
-      <div className="fixed top-0 z-50 flex h-16 w-[calc(100%-16rem)] items-center justify-between bg-white px-4 shadow-sm">
-        <h1 className="text-lg font-semibold">Transactions</h1>
-        <div className="flex items-center gap-2">
+      <ActionHeader title="Transactions">
+        <Button
+          variant="outline"
+          onClick={() => navigate(route("/transactions/suggest-categories"))}
+        >
+          Suggest categories
+        </Button>
+        <Form method="POST">
+          <input readOnly hidden name="intent" value="sync" />
           <Button
             variant="outline"
-            onClick={() => navigate(route("/transactions/suggest-categories"))}
+            disabled={isNavigating}
+            className="flex gap-2"
           >
-            Suggest categories
+            <RefreshCw
+              className={`h-4 w-4 ${isNavigating && "animate-spin"}`}
+            />
+            Sync transactions
           </Button>
-          <Form method="POST">
-            <input readOnly hidden name="intent" value="sync" />
-            <Button
-              variant="outline"
-              disabled={isNavigating}
-              className="flex gap-2"
-            >
-              <RefreshCw
-                className={`h-4 w-4 ${isNavigating && "animate-spin"}`}
-              />
-              Sync transactions
-            </Button>
-          </Form>
-        </div>
-      </div>
-      <div className="relative top-10 px-6 py-8">
+        </Form>
+      </ActionHeader>
+      <div className="relative top-16 px-6 py-8">
         <Outlet />
         {!!actionData && !actionData.success && (
           <div className="absolute left-1/2 w-96 -translate-x-1/2 transform rounded-md border border-red-300 bg-red-200 px-8 py-4 text-center">
