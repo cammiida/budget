@@ -1,26 +1,18 @@
 import type { LoaderFunctionArgs } from "@remix-run/cloudflare";
-import { json, redirect } from "@remix-run/cloudflare";
-import { Outlet, useLoaderData } from "@remix-run/react";
+import { redirect } from "@remix-run/cloudflare";
+import { route } from "routes-gen";
 
 export async function loader(args: LoaderFunctionArgs) {
+  console.log("index loader");
   const user = args.context.user;
 
-  if (!user) {
-    throw redirect("/auth/login");
+  if (user) {
+    throw redirect(route("/dashboard"));
   }
 
-  return json({
-    user,
-  });
+  return new Response(null, { status: 200 });
 }
 
 export default function Index() {
-  const { user } = useLoaderData<typeof loader>();
-
-  return (
-    <div className="h-screen overflow-x-hidden">
-      <p className="">Hello {user.displayName}</p>
-      <Outlet />
-    </div>
-  );
+  return <div className="">Please log in</div>;
 }

@@ -18,10 +18,10 @@ import {
 } from "@remix-run/react";
 import { DrizzleError } from "drizzle-orm";
 import { ApiError } from "generated-sources/gocardless";
-import { Navbar } from "./components/ui/navbar";
 import { getUserSession } from "./lib/auth.server";
 import { flashSession } from "./lib/cookie.server";
 import styles from "./tailwind.css";
+import { Navbar } from "./components/ui/navbar";
 
 export const links: LinksFunction = () => [{ rel: "stylesheet", href: styles }];
 
@@ -69,8 +69,10 @@ export default function App() {
         <Links />
       </head>
       <body>
-        <Navbar />
-        <div className="mx-6 my-8">
+        <div className="w-64">
+          <Navbar />
+        </div>
+        <div className="ml-64 max-h-screen min-h-screen overflow-auto px-6">
           <Outlet />
         </div>
         <ScrollRestoration />
