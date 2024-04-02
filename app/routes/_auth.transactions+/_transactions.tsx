@@ -63,56 +63,9 @@ import {
   transformRemoteTransactions,
 } from "~/lib/utils";
 
-export const transactionStringSchema = z.string().transform((arg) => {
-  if (!arg) return [];
-
-  return z
-    .object({
-      transactionId: z.string(),
-      categoryId: z.number().nullable(),
-    })
-    .array()
-    .parse(JSON.parse(arg));
-});
-
-export async function loader({ context }: LoaderFunctionArgs) {
-  const user = requireUser(context);
-
-  const db = getDbFromContext(context);
-  const allCategories = await db.query.categories.findMany({
-    columns: { name: true, id: true, keywords: true },
-    where: eq(categories.userId, user.id),
-  });
-
-  const transactions = await db.query.bankTransactions.findMany({
-    where: eq(transactionTable.userId, user.id),
-    orderBy: desc(transactionTable.valueDate),
-    columns: {
-      additionalInformation: true,
-      amount: true,
-      bookingDate: true,
-      valueDate: true,
-      currency: true,
-      transactionId: true,
-      spendingType: true,
-      wantOrNeed: true,
-    },
-    with: {
-      account: { columns: { bban: true, accountId: true, name: true } },
-      bank: { columns: { logo: true, name: true } },
-      category: { columns: { id: true, name: true, keywords: true } },
-    },
-  });
-
-  return json({
-    transactions,
-    categories: allCategories,
-  });
-}
-
 type SyncTransactionsArgs = {
   context: AppLoadContext;
-  userId: number;
+  userId: string;
 };
 
 async function syncTransactions({ context, userId }: SyncTransactionsArgs) {
@@ -128,10 +81,13 @@ async function syncTransactions({ context, userId }: SyncTransactionsArgs) {
   const accounts = await dbApi.getAccounts();
 
   const remoteTransactions = await Promise.all(
-    accounts.flatMap(({ accountId, bankId }) =>
+    accounts.flatMap(({ externalAccountId }) =>
       goCardlessApi
-        .getAccountTransactions(accountId, fromDate)
-        .then((res) => ({ ...res.transactions, bankId, accountId })),
+        .getAccountTransactions(externalAccountId!, fromDate) // TODO: fix type can be null
+        .then((res) => ({
+          ...res.transactions,
+          accountId: externalAccountId!, // TODO: same here
+        })),
     ),
   );
 
@@ -164,11 +120,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
 
   switch (intent) {
     case "updateCategory": {
-      const categoryId = z
-        .string()
-        .nullable()
-        .transform((arg) => (arg ? parseInt(arg) : null))
-        .parse(formData.get("value"));
+      const categoryId = z.string().nullable().parse(formData.get("value"));
 
       const dbApi = DbApi.create({ context });
       const updatedTransactions = await dbApi.updateTransactionCategories([
@@ -193,7 +145,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
         .set({ spendingType })
         .where(
           and(
-            eq(bankTransactions.transactionId, transactionId),
+            eq(bankTransactions.externalTransactionId, transactionId), // TODO:
             eq(bankTransactions.userId, user.id),
           ),
         )
@@ -216,7 +168,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
         .set({ wantOrNeed })
         .where(
           and(
-            eq(bankTransactions.transactionId, transactionId),
+            eq(bankTransactions.id, transactionId),
             eq(bankTransactions.userId, user.id),
           ),
         )
@@ -226,6 +178,44 @@ export async function action({ request, context }: ActionFunctionArgs) {
       return json({ success: true, transaction: updatedTransaction });
     }
   }
+}
+
+export async function loader({ context }: LoaderFunctionArgs) {
+  const user = requireUser(context);
+
+  const db = getDbFromContext(context);
+  const allCategories = await db.query.categories.findMany({
+    columns: { name: true, id: true, keywords: true },
+    where: eq(categories.userId, user.id),
+  });
+
+  const transactions = await db.query.bankTransactions.findMany({
+    where: eq(transactionTable.userId, user.id),
+    orderBy: desc(transactionTable.valueDate),
+    columns: {
+      id: true,
+      additionalInformation: true,
+      amount: true,
+      bookingDate: true,
+      valueDate: true,
+      currency: true,
+      externalTransactionId: true,
+      spendingType: true,
+      wantOrNeed: true,
+    },
+    with: {
+      account: {
+        columns: { id: true, bban: true, externalAccountId: true, name: true },
+        with: { bank: { columns: { id: true, name: true, logo: true } } },
+      },
+      category: { columns: { id: true, name: true, keywords: true } },
+    },
+  });
+
+  return json({
+    transactions,
+    categories: allCategories,
+  });
 }
 
 export default function Transactions() {
@@ -238,7 +228,7 @@ export default function Transactions() {
   const isNavigating = navigation.state !== "idle";
 
   const [globalFilter, setGlobalFilter] = useState("");
-  const uniqueBanks = new Set(transactions.map((t) => t.bank.name));
+  const uniqueBankNames = new Set(transactions.map((t) => t.account.bank.name));
   const uniqueAccountNames = new Set(
     transactions.map((t) => prettifyAccountName(t.account.name)),
   );
@@ -250,7 +240,7 @@ export default function Transactions() {
       filterFn: "arrIncludesSome",
       header: (c) => <SortableHeaderCell context={c} name="Bank" />,
       cell: ({ row }) => {
-        const bank = row.original.bank;
+        const bank = row.original.account.bank;
         return (
           <>
             <img
@@ -307,7 +297,7 @@ export default function Transactions() {
             value: name,
           }))}
           intent="updateCategory"
-          transactionId={row.original.transactionId}
+          transactionId={row.original.id}
           placeholder={row.original.category?.name}
         />
       ),
@@ -325,7 +315,7 @@ export default function Transactions() {
             value,
           }))}
           intent="updateSpendingType"
-          transactionId={row.original.transactionId}
+          transactionId={row.original.id}
           placeholder={
             row.original.spendingType
               ? SPENDING_TYPES[row.original.spendingType]
@@ -347,7 +337,7 @@ export default function Transactions() {
             value,
           }))}
           intent="updateWantOrNeed"
-          transactionId={row.original.transactionId}
+          transactionId={row.original.id}
           placeholder={
             row.original.wantOrNeed
               ? WANT_OR_NEED[row.original.wantOrNeed]
@@ -416,7 +406,7 @@ export default function Transactions() {
               <CheckBoxFilterGroup
                 header="Banks"
                 column={table.getColumn("bank")}
-                values={[...uniqueBanks]}
+                values={[...uniqueBankNames]}
               />
               <CheckBoxFilterGroup
                 header="Accounts"

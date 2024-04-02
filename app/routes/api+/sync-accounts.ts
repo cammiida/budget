@@ -1,5 +1,6 @@
 import type { ActionFunctionArgs, AppLoadContext } from "@remix-run/cloudflare";
 import { json } from "@remix-run/cloudflare";
+import { v4 } from "uuid";
 import { requireUser } from "~/lib/auth.server";
 import type { GoogleSession } from "~/lib/cookie.server";
 import { DbApi } from "~/lib/dbApi";
@@ -58,15 +59,30 @@ async function syncAccountsForBank(
 
   const transformedAccounts = remoteAccounts.map(
     ({ accountId, accountDetails, accountBalances }) => {
+      console.log({ accountId });
+      console.log({ accountDetails });
+      console.log({ accountBalances: accountBalances.balances });
+
+      const openingBookedBalance =
+        accountBalances.balances?.find(
+          ({ balanceType }) => balanceType === "openingBooked",
+        )?.balanceAmount ?? null;
+      const interimAvailableBalance =
+        accountBalances.balances?.find(
+          ({ balanceType }) => balanceType === "interimAvailable",
+        )?.balanceAmount ?? null;
+
       return {
-        accountId,
+        id: v4(),
+        externalAccountId: accountId,
         userId: user.id,
-        bankId: bank.bankId,
+        bankId: bank.id,
         name: accountDetails.account.name ?? `${bank?.name} - ${accountId}`,
         ownerName: accountDetails.account.ownerName ?? "Unknown",
-        balances: accountBalances.balances ?? [],
+        openingBookedBalance,
+        interimAvailableBalance,
         bban: accountDetails.account.bban ?? null,
-      } satisfies Required<NewAccount>;
+      } satisfies NewAccount;
     },
   );
 

@@ -11,7 +11,7 @@ import {
   RequisitionsService,
 } from "generated-sources/gocardless";
 import { requireUser } from "./auth.server";
-import type { Bank } from "./schema";
+import type { NewBank } from "./schema";
 
 export class GoCardlessApi {
   private context: AppLoadContext;
@@ -30,11 +30,11 @@ export class GoCardlessApi {
     return requireUser(this.context);
   }
 
-  async getBank({ bankId }: { bankId: string }): Promise<Bank> {
+  async getBank({ bankId }: { bankId: string }): Promise<NewBank> {
     const result = await InstitutionsService.retrieveInstitution(bankId);
 
     return {
-      bankId,
+      externalBankId: bankId,
       userId: this.getCurrentUser().id,
       requisitionId: null,
       name: result.name,

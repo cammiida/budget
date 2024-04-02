@@ -10,7 +10,7 @@ import {
   useNavigate,
   useSubmit,
 } from "@remix-run/react";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { useRef } from "react";
 import { route } from "routes-gen";
 import { z } from "zod";
@@ -40,29 +40,25 @@ import type { NewAccount } from "~/lib/schema";
 import { accounts, banks as banksTable } from "~/lib/schema";
 
 const newAccountSchema = z.object({
-  accountId: z.string(),
+  type: z.literal("debit").or(z.literal("credit")),
   accountName: z.string(),
   ownerName: z.string(),
   startingBalance: z.string(),
-  bankId: z.string(),
+  bankName: z.string(),
 });
 
 function toDbAccount(
   data: z.infer<typeof newAccountSchema>,
-  userId: number,
+  userId: string,
+  bankId: string,
 ): NewAccount {
   return {
     userId,
     name: data.accountName,
     ownerName: data.ownerName,
-    balances: [
-      {
-        balanceAmount: { amount: data.startingBalance, currency: "NOK" },
-        balanceType: "",
-      },
-    ],
-    bankId: data.bankId,
-    accountId: data.accountId,
+    interimAvailableBalance: { amount: data.startingBalance, currency: "NOK" },
+    openingBookedBalance: { amount: data.startingBalance, currency: "NOK" },
+    bankId,
   };
 }
 
@@ -71,9 +67,25 @@ export async function action({ request, context }: ActionFunctionArgs) {
   const formData = await request.formData();
 
   const data = newAccountSchema.parse(Object.fromEntries(formData));
-  const transformedData = toDbAccount(data, user.id);
-
   const db = getDbFromContext(context);
+  const bank = await db.query.banks.findFirst({
+    where: and(
+      eq(banksTable.userId, user.id),
+      eq(banksTable.name, data.bankName),
+    ),
+  });
+  if (!bank) {
+    return json(
+      {
+        success: false,
+        error: "Failed to create account. Bank not found.",
+      },
+      { status: 404 },
+    );
+  }
+
+  const transformedData = toDbAccount(data, user.id, bank.id);
+
   await db.insert(accounts).values(transformedData).execute();
 
   return redirect(route("/accounts"));
@@ -84,7 +96,7 @@ export async function loader({ context }: LoaderFunctionArgs) {
 
   const db = getDbFromContext(context);
   const banks = await db.query.banks.findMany({
-    columns: { bankId: true, name: true, logo: true },
+    columns: { name: true, logo: true },
     where: eq(banksTable.userId, user.id),
   });
 
@@ -124,21 +136,17 @@ export default function NewAccount() {
                 <Input name="ownerName" className="mt-2" />
               </Label>
               <Label>
-                Account ID
-                <Input name="accountId" className="mt-2" />
-              </Label>
-              <Label>
                 Starting balance
                 <Input name="startingBalance" type="number" className="mt-2" />
               </Label>
               <Label>Bank</Label>
-              <Select name="bankId">
+              <Select name="bankName">
                 <SelectTrigger>
                   <SelectValue placeholder="Select a bank" />
                 </SelectTrigger>
                 <SelectContent>
                   {banks.map((bank) => (
-                    <SelectItem key={bank.bankId} value={bank.bankId}>
+                    <SelectItem key={bank.name} value={bank.name}>
                       {bank.name}
                     </SelectItem>
                   ))}

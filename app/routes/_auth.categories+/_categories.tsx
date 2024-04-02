@@ -31,9 +31,7 @@ async function deleteCategoryAction(
   formData: FormData,
   context: AppLoadContext,
 ) {
-  const data = z
-    .object({ id: z.string().transform((arg) => Number(arg)) })
-    .parse(Object.fromEntries(formData));
+  const data = z.object({ id: z.string() }).parse(Object.fromEntries(formData));
 
   try {
     const res = await DbApi.create({ context }).deleteCategory(data.id);
@@ -52,7 +50,7 @@ async function updateCategoryAction(
   const user = requireUser(context);
   const data = z
     .object({
-      id: z.string().transform((arg) => Number(arg)),
+      id: z.string(),
       keywords: z.string().transform((arg) => arg.split(",")),
     })
     .parse(Object.fromEntries(formData));

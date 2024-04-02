@@ -8,7 +8,7 @@ export type GoogleSession = Pick<
   GoogleProfile,
   "displayName" | "name" | "_json"
 > & {
-  id: number;
+  id: string;
   email: string;
   avatar?: string;
 };

@@ -49,7 +49,7 @@ export async function action({ context, request }: ActionFunctionArgs) {
 
     // if requisition exists and is not expired, return requisition
     if (existingRequistion && existingRequistion.status !== "EX") {
-      return redirect(route("/banks/:bankId", { bankId }));
+      return redirect(route("/banks"));
     }
 
     // else create a new requisition and redirect to bank authorization

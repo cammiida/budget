@@ -2,24 +2,21 @@ import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 import { relations } from "drizzle-orm";
 import {
   customType,
-  foreignKey,
-  integer,
-  primaryKey,
   sqliteTable,
   text,
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
-import type { BalanceSchema } from "generated-sources/gocardless";
+import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
 import type { SpendingType, WantOrNeed } from "./constants";
 
 export const users = sqliteTable(
   "Users",
   {
-    id: integer("id").primaryKey({
-      autoIncrement: true,
-    }),
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => uuidv4()),
     email: text("email").notNull(),
     name: text("name"),
   },
@@ -41,8 +38,11 @@ export const userRelations = relations(users, ({ many }) => ({
 export const banks = sqliteTable(
   "Banks",
   {
-    bankId: text("bank_id").notNull(),
-    userId: integer("user_id")
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => uuidv4()),
+    externalBankId: text("bank_id").notNull(),
+    userId: text("user_id")
       .references(() => users.id, { onDelete: "cascade" })
       .notNull(),
     name: text("name").notNull(),
@@ -51,7 +51,11 @@ export const banks = sqliteTable(
     bic: text("bic"),
   },
   (bank) => ({
-    pk: primaryKey({ columns: [bank.bankId, bank.userId] }),
+    uniqueExternalBank: uniqueIndex("unique_on").on(
+      bank.userId,
+      bank.externalBankId,
+    ),
+    uniqueName: uniqueIndex("unique_name").on(bank.userId, bank.name),
   }),
 );
 
@@ -67,64 +71,221 @@ export const bankRelations = relations(banks, ({ one, many }) => ({
   transactions: many(bankTransactions),
 }));
 
+type Balance = {
+  amount: string;
+  currency: string;
+};
+
 export const accounts = sqliteTable(
   "Accounts",
   {
-    accountId: text("account_id").notNull(),
-    userId: integer("user_id")
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => uuidv4()),
+    externalAccountId: text("account_id"),
+    userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    bankId: text("bank_id").notNull(),
+    bankId: text("bank_id")
+      .notNull()
+      .references(() => banks.id, { onDelete: "cascade" }),
     bban: text("bban"),
     name: text("name").notNull(),
     ownerName: text("owner_name"),
-    balances: text("balances", { mode: "json" })
-      .$type<BalanceSchema[]>()
-      .notNull(),
+    interimAvailableBalance: text("interim_available_balance", {
+      mode: "json",
+    }).$type<Balance>(),
+    openingBookedBalance: text("opening_booked_balance", {
+      mode: "json",
+    }).$type<Balance>(),
+    expectedBalance: text("expected_balance", {
+      mode: "json",
+    }).$type<Balance>(),
   },
   (account) => ({
-    bankReference: foreignKey({
-      columns: [account.userId, account.bankId],
-      foreignColumns: [banks.userId, banks.bankId],
-      name: "bankReference",
-    }).onDelete("cascade"),
-    pk: primaryKey({
-      columns: [account.userId, account.bankId, account.accountId],
-    }),
+    uniqueName: uniqueIndex("unique_name").on(account.userId, account.name),
+    uniqueExternalId: uniqueIndex("unique_external_id").on(
+      account.userId,
+      account.externalAccountId,
+    ),
   }),
 );
 
 export type Account = InferSelectModel<typeof accounts>;
 export type NewAccount = InferInsertModel<typeof accounts>;
 
-export const accountRelations = relations(accounts, ({ one, many }) => ({
+// type AccountColumnName =
+//   | "id"
+//   | "externalAccountId"
+//   | "userId"
+//   | "bankId"
+//   | "bban"
+//   | "name"
+//   | "ownerName"
+//   | "interimAvailableBalance"
+//   | "expectedBalance";
+
+// const accountColumns: Record<AccountColumnName, SQLiteColumnBuilderBase> = {
+//   id: text("id")
+//     .primaryKey()
+//     .$defaultFn(() => uuidv4()),
+//   externalAccountId: text("account_id"),
+//   userId: text("user_id")
+//     .notNull()
+//     .references(() => users.id, { onDelete: "cascade" }),
+//   bankId: text("bank_id")
+//     .notNull()
+//     .references(() => banks.id, { onDelete: "cascade" }),
+//   bban: text("bban"),
+//   name: text("name").notNull(),
+//   ownerName: text("owner_name"),
+//   interimAvailableBalance: text("interim_available_balance", {
+//     mode: "json",
+//   }).$type<Balance>(),
+//   expectedBalance: text("expected_balance", {
+//     mode: "json",
+//   }).$type<Balance>(),
+// };
+
+// const accountExtraConfig: <
+//   TTableName extends string,
+//   TColumnsMap extends typeof accountColumns,
+// >(
+//   self: BuildColumns<TTableName, TColumnsMap, "sqlite">,
+// ) => SQLiteTableExtraConfig = (account) => ({
+//   uniqueName: uniqueIndex("unique_name").on(account.userId, account.name),
+//   uniqueExternalId: uniqueIndex("unique_external_id").on(
+//     account.userId,
+//     account.externalAccountId,
+//   ),
+// });
+
+// export const debitAccounts = sqliteTable(
+//   "DebitAccounts",
+//   {
+//     ...accountColumns,
+//     openingBookedBalance: text("opening_booked_balance", {
+//       mode: "json",
+//     }).$type<Balance>(),
+//   },
+//   accountExtraConfig,
+// );
+
+// export const creditAccounts = sqliteTable(
+//   "CreditAccounts",
+//   {
+//     ...accountColumns,
+//     nonInvoicedBalance: text("non_invoiced_balance", {
+//       mode: "json",
+//     }).$type<Balance>(),
+//   },
+//   accountExtraConfig,
+// );
+
+// export const accountRelations = (
+//   accounts: typeof debitAccounts | typeof creditAccounts,
+// ) =>
+//   relations(accounts, ({ one, many }) => ({
+//     bank: one(banks, {
+//       fields: [debitAccounts.userId, debitAccounts.bankId],
+//       references: [banks.userId, banks.id],
+//     }),
+//     user: one(users, {
+//       fields: [debitAccounts.userId],
+//       references: [users.id],
+//     }),
+//     // transactions: many(bankTransactions),
+//   }));
+
+// export const debitAccountRelations = accountRelations(debitAccounts);
+// export const creditAccountRelations = accountRelations(creditAccounts);
+
+export const accountRelations = relations(accounts, ({ one }) => ({
   bank: one(banks, {
     fields: [accounts.userId, accounts.bankId],
-    references: [banks.userId, banks.bankId],
+    references: [banks.userId, banks.id],
   }),
   user: one(users, {
     fields: [accounts.userId],
     references: [users.id],
   }),
-  transactions: many(bankTransactions),
 }));
+
+export const budgets = sqliteTable(
+  "Budgets",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => uuidv4()),
+    userId: text("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    name: text("name").notNull(),
+  },
+  (budget) => ({
+    uniqueOn: uniqueIndex("unique_on").on(budget.userId, budget.name),
+  }),
+);
+
+export const budgetRelations = relations(budgets, ({ one, many }) => ({
+  user: one(users, {
+    fields: [budgets.userId],
+    references: [users.id],
+  }),
+  categoryGroups: many(categoryGroups),
+}));
+
+export const categoryGroups = sqliteTable(
+  "CategoryGroups",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => uuidv4()),
+    userId: text("userId")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    budgetId: text("budgetId")
+      .references(() => budgets.id, { onDelete: "cascade" })
+      .notNull(),
+    name: text("name").notNull(),
+  },
+  (categoryGroup) => ({
+    uniqueName: uniqueIndex("unique_on").on(
+      categoryGroup.userId,
+      categoryGroup.name,
+    ),
+  }),
+);
+
+export const categoryGroupRelations = relations(
+  categoryGroups,
+  ({ one, many }) => ({
+    budget: one(budgets, {
+      fields: [categoryGroups.budgetId],
+      references: [budgets.id],
+    }),
+    categories: many(categories),
+  }),
+);
 
 export const categories = sqliteTable(
   "Categories",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    userId: integer("user_id")
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => uuidv4()),
+    userId: text("user_id")
       .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    categoryGroupId: text("category_group_id")
+      .references(() => categoryGroups.id, { onDelete: "cascade" })
       .notNull(),
     name: text("name").notNull(),
     color: text("color"),
     keywords: text("keywords", { mode: "json" }).$type<string[]>(),
-    categoryGroupId: integer("category_group_id")
-      .references(() => categoryGroups.id, { onDelete: "cascade" })
-      .notNull(),
   },
   (category) => ({
-    uniqueOne: uniqueIndex("unique_on").on(category.userId, category.name),
+    uniqueName: uniqueIndex("unique_on").on(category.userId, category.name),
   }),
 );
 
@@ -144,7 +305,7 @@ export const categoryRelations = relations(categories, ({ one, many }) => ({
 }));
 
 export const createCategory = createInsertSchema(categories, {
-  userId: z.number().optional(),
+  userId: z.string().optional(),
   keywords: z
     .string()
     .transform((arg) => arg.split(","))
@@ -170,13 +331,17 @@ const timestamp = customType<{
 export const bankTransactions = sqliteTable(
   "BankTransactions",
   {
-    transactionId: text("transaction_id").notNull(),
-    userId: integer("user_id")
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => uuidv4()),
+    externalTransactionId: text("transaction_id"),
+    userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    bankId: text("bank_id").notNull(),
-    accountId: text("account_id").notNull(),
-    categoryId: integer("category_id").references(() => categories.id, {
+    accountId: text("account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    categoryId: text("category_id").references(() => categories.id, {
       onDelete: "set null",
     }),
     status: text("status").$type<"booked" | "pending">().notNull(),
@@ -198,17 +363,10 @@ export const bankTransactions = sqliteTable(
     wantOrNeed: text("want_or_need").$type<WantOrNeed>(),
   },
   (transaction) => ({
-    accountReference: foreignKey({
-      columns: [transaction.userId, transaction.bankId, transaction.accountId],
-      foreignColumns: [accounts.userId, accounts.bankId, accounts.accountId],
-    }).onDelete("cascade"),
-    pk: primaryKey({
-      columns: [
-        transaction.transactionId,
-        transaction.accountId,
-        transaction.userId,
-      ],
-    }),
+    uniqueExternalId: uniqueIndex("unique_external_id").on(
+      transaction.userId,
+      transaction.externalTransactionId,
+    ),
   }),
 );
 
@@ -216,68 +374,16 @@ export type Transaction = InferSelectModel<typeof bankTransactions>;
 export type NewTransaction = InferInsertModel<typeof bankTransactions>;
 
 export const transactionRelations = relations(bankTransactions, ({ one }) => ({
-  bank: one(banks, {
-    fields: [bankTransactions.userId, bankTransactions.bankId],
-    references: [banks.userId, banks.bankId],
-  }),
   account: one(accounts, {
-    fields: [
-      bankTransactions.userId,
-      bankTransactions.bankId,
-      bankTransactions.accountId,
-    ],
-    references: [accounts.userId, accounts.bankId, accounts.accountId],
+    fields: [bankTransactions.accountId],
+    references: [accounts.id],
   }),
   category: one(categories, {
-    fields: [bankTransactions.categoryId, bankTransactions.userId],
-    references: [categories.id, categories.userId],
+    fields: [bankTransactions.categoryId],
+    references: [categories.id],
   }),
   user: one(users, {
     fields: [bankTransactions.userId],
     references: [users.id],
   }),
 }));
-
-export const budgets = sqliteTable(
-  "Budgets",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    userId: integer("user_id")
-      .references(() => users.id, { onDelete: "cascade" })
-      .notNull(),
-    name: text("name").notNull(),
-  },
-  (budget) => ({
-    uniqueOn: uniqueIndex("unique_on").on(budget.userId, budget.name),
-  }),
-);
-
-export const budgetRelations = relations(budgets, ({ one, many }) => ({
-  user: one(users, {
-    fields: [budgets.userId],
-    references: [users.id],
-  }),
-  categoryGroups: many(categoryGroups),
-}));
-
-export const categoryGroups = sqliteTable("CategoryGroups", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  userId: integer("userId")
-    .references(() => users.id, { onDelete: "cascade" })
-    .notNull(),
-  budgetId: integer("budgetId")
-    .references(() => budgets.id, { onDelete: "cascade" })
-    .notNull(),
-  name: text("name").notNull(),
-});
-
-export const categoryGroupRelations = relations(
-  categoryGroups,
-  ({ one, many }) => ({
-    budget: one(budgets, {
-      fields: [categoryGroups.budgetId],
-      references: [budgets.id],
-    }),
-    categories: many(categories),
-  }),
-);

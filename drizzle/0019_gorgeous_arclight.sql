@@ -1,0 +1,1 @@
+ALTER TABLE Accounts ADD `opening_booked_balance` text;

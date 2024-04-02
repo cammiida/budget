@@ -41,7 +41,7 @@ export class DbApi {
     return this.db.select().from(schema.users).all();
   }
 
-  async getUserById(id: number): Promise<User | undefined> {
+  async getUserById(id: string): Promise<User | undefined> {
     return this.db
       .select()
       .from(schema.users)
@@ -74,46 +74,40 @@ export class DbApi {
       .insert(schema.banks)
       .values({ ...bank, userId: user.id })
       .onConflictDoUpdate({
-        target: [schema.banks.userId, schema.banks.bankId],
+        target: [schema.banks.userId, schema.banks.externalBankId],
         set: { ...bank, userId: user.id },
       })
       .returning()
       .get();
   }
 
-  async removeBank(bankId: string) {
+  async removeBank(id: string) {
     const user = this.getCurrentUser();
 
     return this.db
       .delete(schema.banks)
-      .where(
-        and(eq(schema.banks.userId, user.id), eq(schema.banks.bankId, bankId)),
-      )
+      .where(and(eq(schema.banks.userId, user.id), eq(schema.banks.id, id)))
       .returning()
       .get();
   }
 
-  async getBank(bankId: string) {
+  async getBank(id: string) {
     const user = this.getCurrentUser();
 
     return this.db
       .select()
       .from(schema.banks)
-      .where(
-        and(eq(schema.banks.userId, user.id), eq(schema.banks.bankId, bankId)),
-      )
+      .where(and(eq(schema.banks.userId, user.id), eq(schema.banks.id, id)))
       .get();
   }
 
-  async updateBank(bankId: string, updates: Partial<Bank>) {
+  async updateBank(id: string, updates: Partial<Bank>) {
     const user = this.getCurrentUser();
 
     return this.db
       .update(schema.banks)
       .set(updates)
-      .where(
-        and(eq(schema.banks.userId, user.id), eq(schema.banks.bankId, bankId)),
-      )
+      .where(and(eq(schema.banks.userId, user.id), eq(schema.banks.id, id)))
       .returning();
   }
 
@@ -152,18 +146,19 @@ export class DbApi {
         .insert(schema.accounts)
         .values(accounts)
         .onConflictDoUpdate({
-          target: [
-            schema.accounts.userId,
-            schema.accounts.bankId,
-            schema.accounts.accountId,
-          ],
+          target: [schema.accounts.userId, schema.accounts.externalAccountId],
           set: {
-            balances: sql`excluded.balances`,
+            openingBookedBalance: sql`excluded.opening_booked_balance`,
+            interimAvailableBalance: sql`excluded.interim_available_balance`,
+            expectedBalance: sql`excluded.expected_balance`,
             bban: sql`excluded.bban`,
             name: sql`excluded.name`,
             ownerName: sql`excluded.owner_name`,
           } satisfies Record<
-            keyof Omit<Account, "userId" | "bankId" | "accountId">,
+            keyof Omit<
+              Account,
+              "id" | "userId" | "bankId" | "externalAccountId"
+            >,
             SQL<Transaction>
           >,
         })
@@ -195,7 +190,7 @@ export class DbApi {
       .get();
   }
 
-  async deleteCategory(id: number) {
+  async deleteCategory(id: string) {
     const currentUser = this.getCurrentUser();
 
     return this.db
@@ -237,7 +232,7 @@ export class DbApi {
           .values(transactions.slice(start, end))
           .onConflictDoNothing({
             target: [
-              schema.bankTransactions.transactionId,
+              schema.bankTransactions.externalTransactionId,
               schema.bankTransactions.accountId,
               schema.bankTransactions.userId,
             ],
@@ -267,7 +262,7 @@ export class DbApi {
   }
 
   async updateTransactionCategories(
-    elements: { transactionId: string; categoryId: number | null }[],
+    elements: { transactionId: string; categoryId: string | null }[],
   ) {
     const currentUser = this.getCurrentUser();
     return await Promise.all(
@@ -277,7 +272,7 @@ export class DbApi {
           .set({ categoryId: it.categoryId })
           .where(
             and(
-              eq(schema.bankTransactions.transactionId, it.transactionId),
+              eq(schema.bankTransactions.id, it.transactionId),
               eq(schema.bankTransactions.userId, currentUser.id),
             ),
           )

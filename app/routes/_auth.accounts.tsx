@@ -22,7 +22,12 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
   const db = getDbFromContext(context);
   const accounts = await db.query.accounts.findMany({
     where: eq(accountsTable.userId, user.id),
-    columns: { name: true, ownerName: true, balances: true },
+    columns: {
+      name: true,
+      ownerName: true,
+      interimAvailableBalance: true,
+      openingBookedBalance: true,
+    },
     with: { bank: true },
   });
 
@@ -64,9 +69,7 @@ export default function Accounts() {
         <div className="w-1/2 min-w-fit rounded-md bg-white px-6 py-8 shadow-sm">
           <ul className="flex w-full min-w-[400px] flex-col gap-4">
             {accounts.map((account) => {
-              const balance = account.balances.find(
-                (balance) => balance.balanceType === "interimAvailable",
-              );
+              const balance = account.interimAvailableBalance;
 
               return (
                 <li
@@ -89,8 +92,7 @@ export default function Accounts() {
                       </div>
                     </div>
                     <span className="text-sm">
-                      {balance?.balanceAmount.currency}{" "}
-                      {balance?.balanceAmount.amount}
+                      {balance?.currency} {balance?.amount}
                     </span>
                   </div>
                 </li>

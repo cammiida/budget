@@ -15,6 +15,7 @@ import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { desc, eq } from "drizzle-orm";
 import { Link } from "react-router-dom";
 import { route } from "routes-gen";
+import { z } from "zod";
 import ClientOnly from "~/components/client-only";
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
@@ -35,7 +36,6 @@ import {
   bankTransactions as transactionTable,
 } from "~/lib/schema";
 import { formatDate } from "~/lib/utils";
-import { transactionStringSchema } from "./_transactions";
 
 export async function loader({ context }: LoaderFunctionArgs) {
   const user = requireUser(context);
@@ -51,11 +51,14 @@ export async function loader({ context }: LoaderFunctionArgs) {
         bookingDate: true,
         valueDate: true,
         currency: true,
-        transactionId: true,
+        id: true,
+        externalTransactionId: true,
       },
       with: {
-        account: { columns: { bban: true, accountId: true, name: true } },
-        bank: { columns: { logo: true, name: true } },
+        account: {
+          columns: { bban: true, id: true, name: true },
+          with: { bank: { columns: { id: true, logo: true, name: true } } },
+        },
         category: { columns: { id: true, name: true, keywords: true } },
       },
     }),
@@ -148,7 +151,7 @@ export default function SuggestCategories() {
       accessorKey: "bank.name",
       header: "Bank",
       cell: ({ row }) => {
-        const bank = row.original.bank;
+        const bank = row.original.account.bank;
         return (
           <>
             <img
@@ -236,14 +239,10 @@ export default function SuggestCategories() {
                   value={JSON.stringify(
                     table
                       .getSelectedRowModel()
-                      .rows.map(
-                        ({
-                          original: { transactionId, suggestedCategory },
-                        }) => ({
-                          transactionId,
-                          categoryId: suggestedCategory.id,
-                        }),
-                      ),
+                      .rows.map(({ original: { id, suggestedCategory } }) => ({
+                        transactionId: id,
+                        categoryId: suggestedCategory.id,
+                      })),
                   )}
                 />
                 <Button type="submit">Save</Button>
@@ -255,3 +254,15 @@ export default function SuggestCategories() {
     </ClientOnly>
   );
 }
+
+export const transactionStringSchema = z.string().transform((arg) => {
+  if (!arg) return [];
+
+  return z
+    .object({
+      transactionId: z.string(),
+      categoryId: z.string().nullable(),
+    })
+    .array()
+    .parse(JSON.parse(arg));
+});

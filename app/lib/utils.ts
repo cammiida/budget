@@ -5,8 +5,8 @@ import { clsx } from "clsx";
 import type { TransactionSchema } from "generated-sources/gocardless";
 import type { RouteId } from "route-ids";
 import { twMerge } from "tailwind-merge";
-import type { NewTransaction, Transaction } from "./schema";
 import { z } from "zod";
+import type { NewTransaction } from "./schema";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -14,56 +14,49 @@ export function cn(...inputs: ClassValue[]) {
 
 export function transformRemoteTransactions(
   remoteTransactions: {
-    bankId: string;
     accountId: string;
     booked: TransactionSchema[];
     pending?: TransactionSchema[] | undefined;
   }[],
-  userId: number,
+  userId: string,
 ): NewTransaction[] {
-  return remoteTransactions.flatMap(
-    ({ pending, booked, accountId, bankId }) => {
-      const pendingTransactions = (pending ?? []).flatMap((it) =>
-        transformRemoteTransaction({
-          remote: it,
-          status: "pending",
-          userId,
-          accountId,
-          bankId,
-        }),
-      );
+  return remoteTransactions.flatMap(({ pending, booked, accountId }) => {
+    const pendingTransactions = (pending ?? []).flatMap((it) =>
+      transformRemoteTransaction({
+        remote: it,
+        status: "pending",
+        userId,
+        accountId,
+      }),
+    );
 
-      const bookedTransactions = booked.flatMap((it) =>
-        transformRemoteTransaction({
-          remote: it,
-          status: "booked",
-          userId,
-          accountId,
-          bankId,
-        }),
-      );
-      return [...pendingTransactions, ...bookedTransactions];
-    },
-  );
+    const bookedTransactions = booked.flatMap((it) =>
+      transformRemoteTransaction({
+        remote: it,
+        status: "booked",
+        userId,
+        accountId,
+      }),
+    );
+    return [...pendingTransactions, ...bookedTransactions];
+  });
 }
 
-export function transformRemoteTransaction({
-  remote,
-  status,
-  userId,
-  accountId,
-  bankId,
-}: {
+type TransformRemoteTransactionArgs = {
   remote: TransactionSchema;
   status: "booked" | "pending";
-  userId: number;
+  userId: string;
   accountId: string;
-  bankId: string;
-}): Transaction {
+};
+
+export function transformRemoteTransaction(
+  args: TransformRemoteTransactionArgs,
+): NewTransaction {
+  const { remote, status, userId, accountId } = args;
+
   return {
     userId,
-    bankId,
-    transactionId:
+    externalTransactionId:
       remote.transactionId ??
       remote.internalTransactionId ??
       `${accountId} - ${userId}`,

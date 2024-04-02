@@ -33,7 +33,7 @@ function Banks() {
       </ActionHeader>
       <div className="relative top-16 flex flex-col gap-4 px-6 py-8">
         {chosenBanks.map((it) => (
-          <BankComponent bank={it} key={it.bankId} />
+          <BankComponent bank={it} key={it.externalBankId} />
         ))}
         <div className="px-8">
           <Outlet />
@@ -50,7 +50,7 @@ function BankComponent({ bank }: { bank: Bank }) {
   const isDeleting = fetcher.state !== "idle";
   const params = useParams();
 
-  const isActive = params.bankId === bank.bankId;
+  const isActive = params.bankId === bank.id;
 
   return (
     <div
@@ -67,7 +67,7 @@ function BankComponent({ bank }: { bank: Bank }) {
         action={route("/api/remove-bank")}
         className="ml-auto"
       >
-        <input type="hidden" name="bankId" value={bank.bankId} />
+        <input type="hidden" name="bankId" value={bank.id} />
         <Button variant="destructive" type="submit" disabled={isDeleting}>
           {isDeleting ? "Deleting..." : "Delete"}
         </Button>
