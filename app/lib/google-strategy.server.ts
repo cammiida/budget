@@ -7,6 +7,7 @@ import type {
 import { OAuth2Strategy } from "remix-auth-oauth2";
 import type { GoogleSession } from "./cookie.server";
 import { getDbFromContext } from "./db.service.server";
+import type { User } from "./schema";
 import { users } from "./schema";
 import type { ServerArgs } from "./types";
 
@@ -29,12 +30,17 @@ export function createGoogleStrategy(args: ServerArgs) {
     async ({ profile }) => {
       const email = profile.emails[0].value;
 
-      const existingUser = await db
-        .select()
-        .from(users)
-        .where(eq(users.email, email))
-        .limit(1)
-        .get();
+      let existingUser: User | undefined;
+      try {
+        existingUser = await db
+          .select()
+          .from(users)
+          .where(eq(users.email, email))
+          .limit(1)
+          .get();
+      } catch (error) {
+        console.error("Error fetching user", error);
+      }
 
       if (existingUser) {
         return {
