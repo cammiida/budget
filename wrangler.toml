@@ -1,4 +1,4 @@
-compatibility_date = "2022-04-05"
+compatibility_date = "2023-11-25"
 
 [[ d1_databases ]]
 binding = "DB" # i.e. available in your Worker on env.DB. Should match preview_database_id for local dev
